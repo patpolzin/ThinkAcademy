@@ -4,7 +4,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WalletProvider } from "@/components/WalletProvider";
+import { PrivyProvider } from '@privy-io/react-auth';
 import Dashboard from "@/pages/dashboard";
+
+const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || 'cme35jx9100i6ky0bxiecsetb';
 
 function Router() {
   return (
@@ -24,7 +27,8 @@ function Router() {
 }
 
 function App() {
-  return (
+  // Conditional Privy Provider based on valid app ID
+  const AppContent = (
     <QueryClientProvider client={queryClient}>
       <WalletProvider>
         <TooltipProvider>
@@ -34,6 +38,29 @@ function App() {
       </WalletProvider>
     </QueryClientProvider>
   );
+
+  // Try to wrap with PrivyProvider, fallback to basic app if configuration fails
+  try {
+    return (
+      <PrivyProvider
+        appId={PRIVY_APP_ID}
+        config={{
+          appearance: {
+            theme: 'dark',
+            accentColor: '#06b6d4', // cyan-500
+          },
+          embeddedWallets: {
+            createOnLogin: 'users-without-wallets',
+          },
+        }}
+      >
+        {AppContent}
+      </PrivyProvider>
+    );
+  } catch (error) {
+    console.log('Privy Provider initialization failed, running without Privy:', error);
+    return AppContent;
+  }
 }
 
 export default App;

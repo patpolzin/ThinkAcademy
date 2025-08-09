@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Mail, Wallet, BookOpen, Play, Unlock, Shield } from 'lucide-react';
 import { useWallet } from './WalletProvider';
+import { usePrivy } from '@privy-io/react-auth';
 import { Button } from './ui/button';
 
 interface AuthModalProps {
@@ -10,6 +11,16 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { connectWallet, isConnected } = useWallet();
+  
+  // Safe Privy hook usage with fallback
+  let privyState = { login: null, authenticated: false, user: null };
+  try {
+    privyState = usePrivy();
+  } catch (error) {
+    console.log('Privy not available:', error);
+  }
+  
+  const { login, authenticated, user } = privyState;
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMethod, setLoadingMethod] = useState<'wallet' | 'email' | null>(null);
 
@@ -33,21 +44,24 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setIsLoading(true);
     setLoadingMethod('email');
     
-    // TODO: Integrate with Privy SDK
-    // For Privy integration, you'll need to:
-    // 1. Get your Privy App ID from dashboard.privy.io
-    // 2. Install @privy-io/react-auth package
-    // 3. Wrap your app with PrivyProvider
-    // 4. Use usePrivy() hook for authentication
-    console.log('Privy login would be called here');
-    
-    // Mock Privy authentication for now - creates non-custodial wallet for user
-    setTimeout(() => {
+    try {
+      if (login) {
+        await login();
+        if (authenticated) {
+          console.log('Privy authentication successful:', user);
+          onClose();
+        }
+      } else {
+        console.log('Privy is not properly configured. Please check your App ID.');
+        alert('Email authentication requires proper Privy configuration. Please verify your App ID in the secrets.');
+      }
+    } catch (error) {
+      console.error('Privy authentication failed:', error);
+      alert('Authentication failed. Please check your Privy configuration.');
+    } finally {
       setIsLoading(false);
       setLoadingMethod(null);
-      onClose();
-      // In real implementation, this would create/assign a wallet to the email
-    }, 2000);
+    }
   };
 
   if (!isOpen) return null;
