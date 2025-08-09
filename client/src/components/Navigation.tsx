@@ -37,7 +37,7 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
               onClick={() => onTabChange(item.id)}
               className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === item.id
-                  ? 'border-primary-500 text-primary-600'
+                  ? 'border-cyan-500 text-cyan-600'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
               data-testid={`nav-${item.id}`}

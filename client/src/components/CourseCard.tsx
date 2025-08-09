@@ -81,7 +81,7 @@ export default function CourseCard({ course, enrollment, compact = false }: Cour
           {enrollment && (
             <div className="w-full bg-slate-200 rounded-full h-2 mt-2">
               <div 
-                className="bg-primary-500 h-2 rounded-full transition-all"
+                className="bg-cyan-500 h-2 rounded-full transition-all"
                 style={{ width: `${enrollment.progress}%` }}
               ></div>
             </div>
@@ -149,7 +149,7 @@ export default function CourseCard({ course, enrollment, compact = false }: Cour
             </div>
             <div className="w-full bg-slate-200 rounded-full h-2">
               <div 
-                className="bg-primary-500 h-2 rounded-full transition-all"
+                className="bg-cyan-500 h-2 rounded-full transition-all"
                 style={{ width: `${enrollment.progress}%` }}
               ></div>
             </div>

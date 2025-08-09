@@ -113,11 +113,11 @@ export default function Dashboard() {
         return (
           <div className="space-y-8">
             {/* Welcome Section */}
-            <div className="bg-gradient-to-r from-primary-500 to-purple-600 rounded-2xl p-8 text-white">
+            <div className="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl p-8 text-white">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-3xl font-bold mb-2">Welcome back!</h2>
-                  <p className="text-primary-100 text-lg">Continue your Web3 learning journey</p>
+                  <p className="text-cyan-100 text-lg">Continue your Web3 learning journey</p>
                 </div>
                 <div className="hidden md:block">
                   <img 
@@ -333,7 +333,7 @@ export default function Dashboard() {
                         </td>
                         <td className="py-4">
                           <div className="flex items-center space-x-2">
-                            <button className="text-primary-500 hover:text-primary-600 text-sm">Edit</button>
+                            <button className="text-cyan-500 hover:text-cyan-600 text-sm">Edit</button>
                             <button className="text-slate-500 hover:text-slate-600 text-sm">Analytics</button>
                           </div>
                         </td>
@@ -353,27 +353,45 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-slate-900">
+                <span className="text-cyan-500">U</span>THINK
+              </h1>
+            </div>
+            <WalletConnect />
+          </div>
+        </div>
+      </header>
+
       <Navigation 
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        navItems={navItems}
+        onTabChange={setActiveTab}
       />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isConnected ? renderTabContent() : (
           <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Connect to EduDAO</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Connect to <span className="text-cyan-400">U</span>THINK</h2>
             <p className="text-slate-600 mb-8">Connect your wallet to access token-gated courses and live sessions</p>
             <WalletConnect />
           </div>
         )}
       </main>
 
-      <AuthModal />
       {showCreateCourse && (
         <CreateCourseModal 
           isOpen={showCreateCourse}
           onClose={() => setShowCreateCourse(false)}
+          onSave={(courseData) => {
+            console.log('New course created:', courseData);
+          }}
         />
       )}
     </div>

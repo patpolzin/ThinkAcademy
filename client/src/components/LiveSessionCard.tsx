@@ -101,7 +101,7 @@ export default function LiveSessionCard({ session, compact = false }: LiveSessio
   if (compact) {
     return (
       <div className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg">
-        <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg flex items-center justify-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center">
           <Video className="w-8 h-8 text-white" />
         </div>
         <div className="flex-1">
@@ -125,7 +125,7 @@ export default function LiveSessionCard({ session, compact = false }: LiveSessio
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
-      <div className="relative bg-gradient-to-br from-primary-500 to-purple-600 p-6 text-white">
+      <div className="relative bg-gradient-to-br from-cyan-500 to-blue-600 p-6 text-white">
         {!canAccess && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
             <Lock className="w-8 h-8 text-white" />

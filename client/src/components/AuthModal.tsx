@@ -58,7 +58,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
             <BookOpen className="w-6 h-6 text-primary-500" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome to EduDAO</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome to <span className="text-cyan-400">U</span>THINK</h2>
           <p className="text-slate-600">Access token-gated courses and live sessions</p>
         </div>
 
@@ -85,18 +85,39 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         </div>
 
         <div className="space-y-4">
-          {/* Wallet Connection */}
-          <Button
-            onClick={handleWalletConnect}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-primary-500 to-purple-600 hover:from-primary-600 hover:to-purple-700"
-            data-testid="button-connect-wallet-modal"
-          >
-            <Wallet className="w-4 h-4" />
-            <span>{isLoading ? 'Connecting...' : 'Connect with Wallet'}</span>
-          </Button>
+          {/* Authentication Options */}
+          <div className="grid grid-cols-1 gap-3">
+            <Button
+              onClick={handleWalletConnect}
+              disabled={isLoading}
+              variant="outline"
+              className="w-full flex items-center justify-center space-x-2 border-cyan-200 text-cyan-600 hover:bg-cyan-50"
+              data-testid="button-connect-wallet-modal"
+            >
+              <Wallet className="w-4 h-4" />
+              <span>{isLoading ? 'Connecting...' : 'Connect MetaMask Wallet'}</span>
+            </Button>
 
-          <div className="text-center text-slate-500 text-sm">or</div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-slate-500">Or continue with email</span>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => {/* Toggle to email form */}}
+              className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"
+              data-testid="button-email-auth-toggle"
+            >
+              <Mail className="w-4 h-4" />
+              <span>Email + Assigned Wallet</span>
+            </Button>
+          </div>
+
+
 
           {/* Email Authentication Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
