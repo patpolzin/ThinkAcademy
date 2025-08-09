@@ -278,6 +278,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const reminderData = req.body;
       const reminder = await storage.createReminder(reminderData);
+
+      // Trigger webhook for Make.com integration
+      try {
+        const user = await storage.getUser(reminderData.userId);
+        const session = await storage.getLiveSession(reminderData.sessionId);
+        
+        if (user && session) {
+          const reminderTimeMs = new Date(reminderData.reminderTime).getTime();
+          const sessionTimeMs = new Date(session.scheduledTime).getTime();
+          const minutesBefore = Math.round((sessionTimeMs - reminderTimeMs) / 60000);
+
+          const webhookData = {
+            type: 'reminder_created',
+            userId: reminderData.userId,
+            userEmail: user.contactEmail || user.email,
+            userPhone: user.contactPhone,
+            preferredContactMethod: user.preferredContactMethod || 'email',
+            sessionTitle: session.title,
+            sessionTime: session.scheduledTime,
+            reminderTime: reminderData.reminderTime,
+            minutesBefore: minutesBefore,
+            message: `Reminder: "${session.title}" starts in ${minutesBefore} minutes at ${new Date(session.scheduledTime).toLocaleString()}`
+          };
+
+          // Send to Make.com webhook - add MAKE_WEBHOOK_URL to your environment variables
+          const webhookUrl = process.env.MAKE_WEBHOOK_URL;
+          if (webhookUrl) {
+            console.log('Sending reminder webhook to Make.com:', webhookData);
+            await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookData)
+            });
+          } else {
+            console.log('Webhook data ready for Make.com:', webhookData);
+          }
+        }
+      } catch (webhookError) {
+        console.error('Webhook error (non-critical):', webhookError);
+        // Don't fail the reminder creation if webhook fails
+      }
+
       res.json(reminder);
     } catch (error) {
       res.status(500).json({ error: "Failed to create reminder" });
