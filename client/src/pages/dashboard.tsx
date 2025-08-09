@@ -378,11 +378,41 @@ export default function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isConnected ? renderTabContent() : (
           <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
-              Connect to <span className="text-cyan-400">U</span>THINK
-            </h2>
-            <p className="text-slate-600 dark:text-gray-300 mb-8">Connect your wallet to access token-gated courses and live sessions</p>
-            <WalletConnect />
+            <div className="max-w-2xl mx-auto">
+              <div className="w-24 h-24 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <BookOpen className="w-12 h-12 text-white" />
+              </div>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
+                Welcome to <span className="text-cyan-500">U</span>THINK
+              </h2>
+              <p className="text-slate-600 dark:text-gray-300 text-lg mb-8">
+                A token-gated learning platform where knowledge meets blockchain technology. 
+                Connect your wallet using the login button in the top right to access exclusive courses and live sessions.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-cyan-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="w-8 h-8 text-cyan-500" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Token-Gated Courses</h3>
+                  <p className="text-sm text-slate-600 dark:text-gray-300">Access exclusive courses with THINK tokens or NFTs</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Video className="w-8 h-8 text-emerald-500" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Live Sessions</h3>
+                  <p className="text-sm text-slate-600 dark:text-gray-300">Join interactive sessions with industry experts</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <Award className="w-8 h-8 text-purple-500" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Earn Certificates</h3>
+                  <p className="text-sm text-slate-600 dark:text-gray-300">Complete courses and earn blockchain-verified certificates</p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>
