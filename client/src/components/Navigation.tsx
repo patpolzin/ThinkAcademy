@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { BookOpen, Video, LayoutDashboard, Settings } from 'lucide-react';
+import { BookOpen, Video, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { useWallet } from './WalletProvider';
+import { useQuery } from "@tanstack/react-query";
 
 interface NavigationProps {
   activeTab: string;
@@ -10,17 +11,18 @@ interface NavigationProps {
 export default function Navigation({ activeTab, onTabChange }: NavigationProps) {
   const { address, isConnected } = useWallet();
   
-  // Mock user object for now
-  const user = {
-    id: address,
-    isAdmin: address ? address.toLowerCase().endsWith('000') : false, // Simple admin check
-  };
+  // Get user data with permissions from database
+  const { data: userData } = useQuery({
+    queryKey: ['/api/users', address],
+    enabled: !!address && isConnected,
+  });
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'live', label: 'Live Sessions', icon: Video },
-    ...(user?.isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
+    ...(userData?.isInstructor ? [{ id: 'instructor', label: 'Instructor', icon: Users }] : []),
+    ...(userData?.isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
   ];
 
   if (!isConnected) {

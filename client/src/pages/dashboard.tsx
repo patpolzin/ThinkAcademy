@@ -10,6 +10,7 @@ import AuthModal from "@/components/AuthModal";
 import { useWallet } from "@/components/WalletProvider";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard, User } from "lucide-react";
+import AdminPanel from "@/components/AdminPanel";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -403,112 +404,7 @@ export default function Dashboard() {
 
       case 'admin':
         if (!userData?.isAdmin) return null;
-        
-        return (
-          <div className="space-y-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">Admin Dashboard</h2>
-              <div className="flex items-center space-x-3">
-                <button 
-                  onClick={() => setShowCreateCourse(true)}
-                  className="flex items-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                  data-testid="button-create-course"
-                >
-                  <BookOpen className="w-4 h-4" />
-                  <span>Create Course</span>
-                </button>
-                <button className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                  <Users className="w-4 h-4" />
-                  <span>Manage Users</span>
-                </button>
-                <button className="flex items-center space-x-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                  <Settings className="w-4 h-4" />
-                  <span>System Settings</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Admin Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {adminStats.map((stat, index) => (
-                <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-slate-600 text-sm">{stat.title}</p>
-                      <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
-                    </div>
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color}`}>
-                      <stat.icon className="w-6 h-6" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Course Management Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Course Management</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="text-left py-3 text-sm font-medium text-slate-600">Course</th>
-                      <th className="text-left py-3 text-sm font-medium text-slate-600">Token Requirement</th>
-                      <th className="text-left py-3 text-sm font-medium text-slate-600">Status</th>
-                      <th className="text-left py-3 text-sm font-medium text-slate-600">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {typedCourses.map((course: any) => (
-                      <tr key={course.id} className="border-b border-slate-100">
-                        <td className="py-4">
-                          <div>
-                            <p className="font-medium text-slate-900">{course.title}</p>
-                            <p className="text-sm text-slate-600">by {course.instructor}</p>
-                          </div>
-                        </td>
-                        <td className="py-4">
-                          {course.tokenRequirement.type === 'NONE' ? (
-                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
-                              Free Access
-                            </span>
-                          ) : course.tokenRequirement.type === 'ERC20' ? (
-                            <span className="inline-flex items-center space-x-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
-                              <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                              <span>{course.tokenRequirement.minAmount} {course.tokenRequirement.tokenName}</span>
-                            </span>
-                          ) : course.tokenRequirement.type === 'NFT' ? (
-                            <span className="inline-flex items-center space-x-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded">
-                              <div className="w-2 h-2 bg-purple-500 rounded-sm"></div>
-                              <span>{course.tokenRequirement.minAmount} NFT</span>
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                              Either Token
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-4">
-                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
-                            {course.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-4">
-                          <div className="flex items-center space-x-2">
-                            <button className="text-cyan-500 hover:text-cyan-600 text-sm border border-cyan-300 px-2 py-1 rounded">Edit</button>
-                            <button className="text-slate-500 hover:text-slate-600 text-sm border border-slate-300 px-2 py-1 rounded">Analytics</button>
-                            <button className="text-emerald-500 hover:text-emerald-600 text-sm border border-emerald-300 px-2 py-1 rounded">Students</button>
-                            <button className="text-red-500 hover:text-red-600 text-sm border border-red-300 px-2 py-1 rounded">Archive</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        );
+        return <AdminPanel user={userData} />;
 
       default:
         return null;

@@ -91,8 +91,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: string, updates: Partial<InsertUser>): Promise<User> {
+    // Get current user data to merge with updates for completion calculation
+    const currentUser = await this.getUserById(id);
+    const mergedData = { ...currentUser, ...updates };
+    
     const [user] = await db.update(users)
-      .set(updates)
+      .set({
+        ...updates,
+        lastLoginAt: new Date(),
+        profileCompletionScore: this.calculateProfileCompletion(mergedData)
+      })
       .where(eq(users.id, id))
       .returning();
     return user;
@@ -123,11 +131,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserProfile(walletAddress: string, updates: Partial<InsertUser>): Promise<User> {
+    // Get current user data to merge with updates for completion calculation
+    const currentUser = await this.getUser(walletAddress);
+    const mergedData = { ...currentUser, ...updates };
+    
     const [user] = await db.update(users)
       .set({ 
         ...updates,
         lastLoginAt: new Date(),
-        profileCompletionScore: this.calculateProfileCompletion(updates)
+        profileCompletionScore: this.calculateProfileCompletion(mergedData)
       })
       .where(eq(users.walletAddress, walletAddress.toLowerCase()))
       .returning();
@@ -161,6 +173,10 @@ export class DatabaseStorage implements IStorage {
       totalCertificatesEarned: certificatesEarned.length,
       recentEnrollments
     };
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
   }
 
   async createUser(userData: InsertUser): Promise<User> {
@@ -340,23 +356,31 @@ export class DatabaseStorage implements IStorage {
     totalEnrollments: number;
     avgCompletionRate: number;
   }> {
-    const [stats] = await db.execute(sql`
-      SELECT 
-        COUNT(DISTINCT u.id) as total_students,
-        COUNT(DISTINCT c.id) as active_courses,
-        COUNT(DISTINCT e.id) as total_enrollments,
-        COALESCE(AVG(e.progress), 0) as avg_completion_rate
-      FROM users u
-      LEFT JOIN enrollments e ON u.id = e.user_id
-      LEFT JOIN courses c ON c.is_active = true
-    `);
-    
-    return {
-      totalStudents: Number(stats.total_students) || 0,
-      activeCourses: Number(stats.active_courses) || 0,
-      totalEnrollments: Number(stats.total_enrollments) || 0,
-      avgCompletionRate: Number(stats.avg_completion_rate) || 0
-    };
+    try {
+      // Use simple queries instead of complex SQL to avoid compatibility issues
+      const allUsers = await db.select().from(users);
+      const allCourses = await db.select().from(courses).where(eq(courses.isActive, true));
+      const allEnrollments = await db.select().from(enrollments);
+      
+      const avgProgress = allEnrollments.length > 0 ? 
+        allEnrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / allEnrollments.length : 0;
+      
+      return {
+        totalStudents: allUsers.length,
+        activeCourses: allCourses.length,
+        totalEnrollments: allEnrollments.length,
+        avgCompletionRate: Math.round(avgProgress)
+      };
+    } catch (error) {
+      console.error("Analytics error:", error);
+      // Return safe defaults if query fails
+      return {
+        totalStudents: 0,
+        activeCourses: 0,
+        totalEnrollments: 0,
+        avgCompletionRate: 0
+      };
+    }
   }
 }
 

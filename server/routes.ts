@@ -108,6 +108,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin routes for user management
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      console.log("Fetching all users for admin panel...");
+      const allUsers = await storage.getAllUsers();
+      console.log(`Found ${allUsers.length} users`);
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Admin users fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch users", details: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Admin routes
   app.post("/api/admin/make-admin/:walletAddress", async (req, res) => {
     try {
@@ -296,7 +309,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const analytics = await storage.getAnalytics();
       res.json(analytics);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch analytics" });
+      console.error("Analytics fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch analytics", details: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
