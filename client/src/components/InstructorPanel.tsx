@@ -15,18 +15,80 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [courseDraft, setCourseDraft] = useState<any>(null);
+  const [showDraftList, setShowDraftList] = useState(false);
+  const [allDrafts, setAllDrafts] = useState<any[]>([]);
 
-  // Load course draft from localStorage on component mount
+  // Load course drafts from localStorage on component mount
   useEffect(() => {
-    const savedDraft = localStorage.getItem('draft_course');
-    if (savedDraft) {
-      try {
-        setCourseDraft(JSON.parse(savedDraft));
-      } catch (error) {
-        console.error('Error loading course draft:', error);
+    loadDrafts();
+  }, []);
+
+  const loadDrafts = () => {
+    try {
+      const savedDrafts = localStorage.getItem('course_drafts');
+      const drafts = savedDrafts ? JSON.parse(savedDrafts) : [];
+      setAllDrafts(drafts);
+      
+      // Load the most recent draft for editing
+      const recentDraft = localStorage.getItem('current_draft');
+      if (recentDraft) {
+        setCourseDraft(JSON.parse(recentDraft));
+      }
+    } catch (error) {
+      console.error('Error loading drafts:', error);
+    }
+  };
+
+  const saveDraft = (draftData: any, showToast: boolean = true) => {
+    try {
+      const timestamp = new Date().toISOString();
+      const draft = {
+        ...draftData,
+        id: Date.now().toString(),
+        savedAt: timestamp,
+        title: draftData.title || 'Untitled Course'
+      };
+
+      // Save current draft
+      localStorage.setItem('current_draft', JSON.stringify(draft));
+      
+      // Add to drafts list
+      const existingDrafts = JSON.parse(localStorage.getItem('course_drafts') || '[]');
+      const updatedDrafts = [draft, ...existingDrafts.slice(0, 9)]; // Keep only 10 drafts
+      localStorage.setItem('course_drafts', JSON.stringify(updatedDrafts));
+      
+      setAllDrafts(updatedDrafts);
+      setCourseDraft(draft);
+      
+      if (showToast) {
+        toast({ title: "Course draft saved successfully!" });
+      }
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      if (showToast) {
+        toast({ title: "Failed to save draft", variant: "destructive" });
       }
     }
-  }, []);
+  };
+
+  const loadDraft = (draft: any) => {
+    setCourseDraft(draft);
+    localStorage.setItem('current_draft', JSON.stringify(draft));
+    setShowDraftList(false);
+    setShowCreateCourse(true);
+    toast({ title: "Draft loaded successfully!" });
+  };
+
+  const deleteDraft = (draftId: string) => {
+    try {
+      const updatedDrafts = allDrafts.filter(d => d.id !== draftId);
+      localStorage.setItem('course_drafts', JSON.stringify(updatedDrafts));
+      setAllDrafts(updatedDrafts);
+      toast({ title: "Draft deleted successfully!" });
+    } catch (error) {
+      console.error('Error deleting draft:', error);
+    }
+  };
 
   // Fetch instructor's courses only
   const { data: instructorCourses = [] } = useQuery({
@@ -54,9 +116,10 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
       toast({ title: "Course created successfully!" });
       queryClient.invalidateQueries({ queryKey: ['/api/instructor/courses'] });
       queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
-      localStorage.removeItem('draft_course'); // Clear draft after successful creation
+      localStorage.removeItem('current_draft'); // Clear current draft after successful creation
       setCourseDraft(null);
       setShowCreateCourse(false);
+      loadDrafts(); // Refresh drafts list
     },
     onError: () => {
       toast({ title: "Failed to create course", variant: "destructive" });
@@ -109,14 +172,26 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold text-slate-900">Instructor Dashboard</h3>
-              <button
-                onClick={() => setShowCreateCourse(true)}
-                className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
-                data-testid="button-create-course-instructor"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Course</span>
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowCreateCourse(true)}
+                  className="flex items-center space-x-2 bg-primary-600 text-black px-4 py-2 rounded-lg hover:bg-primary-700"
+                  data-testid="button-create-course-instructor"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Course</span>
+                </button>
+                {allDrafts.length > 0 && (
+                  <button
+                    onClick={() => setShowDraftList(true)}
+                    className="flex items-center space-x-2 bg-slate-200 text-black px-4 py-2 rounded-lg hover:bg-slate-300"
+                    data-testid="button-view-drafts"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>View Drafts ({allDrafts.length})</span>
+                  </button>
+                )}
+              </div>
             </div>
             
             {/* Instructor Stats */}
@@ -344,6 +419,63 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
       {renderInstructorTabContent()}
 
       {/* Create Course Modal */}
+      {/* Draft List Modal */}
+      {showDraftList && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Course Drafts</h3>
+              <button
+                onClick={() => setShowDraftList(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ×
+              </button>
+            </div>
+            
+            {allDrafts.length === 0 ? (
+              <p className="text-slate-600 text-center py-8">No drafts saved yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {allDrafts.map((draft) => (
+                  <div key={draft.id} className="border border-slate-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-slate-900">{draft.title}</h4>
+                        <p className="text-sm text-slate-600 mt-1">
+                          {draft.description?.slice(0, 100)}...
+                        </p>
+                        <div className="flex items-center space-x-4 mt-2 text-xs text-slate-500">
+                          <span>Category: {draft.category}</span>
+                          <span>Level: {draft.difficulty}</span>
+                          <span>Saved: {new Date(draft.savedAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex space-x-2 ml-4">
+                        <button
+                          onClick={() => loadDraft(draft)}
+                          className="bg-primary-600 text-black px-3 py-1 rounded text-sm hover:bg-primary-700"
+                          data-testid={`button-load-draft-${draft.id}`}
+                        >
+                          Load
+                        </button>
+                        <button
+                          onClick={() => deleteDraft(draft.id)}
+                          className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                          data-testid={`button-delete-draft-${draft.id}`}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {showCreateCourse && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4">
@@ -365,8 +497,8 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
                 isActive: true
               };
               
-              // Save to localStorage first for persistence
-              localStorage.setItem('draft_course', JSON.stringify(courseData));
+              // Save to drafts for persistence
+              saveDraft(courseData, false);
               
               // Then create the course
               createCourseMutation.mutate(courseData);
@@ -401,23 +533,25 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
                     <select
                       name="category"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      defaultValue={courseDraft?.category || ''}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black bg-white"
                     >
-                      <option value="Programming">Programming</option>
-                      <option value="Design">Design</option>
-                      <option value="Business">Business</option>
-                      <option value="Marketing">Marketing</option>
+                      <option value="Programming" className="text-black">Programming</option>
+                      <option value="Design" className="text-black">Design</option>
+                      <option value="Business" className="text-black">Business</option>
+                      <option value="Marketing" className="text-black">Marketing</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Difficulty</label>
                     <select
                       name="difficulty"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      defaultValue={courseDraft?.difficulty || ''}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black bg-white"
                     >
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
+                      <option value="Beginner" className="text-black">Beginner</option>
+                      <option value="Intermediate" className="text-black">Intermediate</option>
+                      <option value="Advanced" className="text-black">Advanced</option>
                     </select>
                   </div>
                 </div>
@@ -426,12 +560,13 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Token Requirement</label>
                     <select
                       name="tokenType"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      defaultValue={courseDraft?.tokenType || ''}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black bg-white"
                     >
-                      <option value="NONE">Free Access</option>
-                      <option value="ERC20">THINK Tokens</option>
-                      <option value="NFT">THINK NFT</option>
-                      <option value="EITHER">Either Token</option>
+                      <option value="NONE" className="text-black">Free Access</option>
+                      <option value="ERC20" className="text-black">THINK Tokens</option>
+                      <option value="NFT" className="text-black">THINK NFT</option>
+                      <option value="EITHER" className="text-black">Either Token</option>
                     </select>
                   </div>
                   <div>
@@ -463,8 +598,7 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
                         tokenType: formData.get('tokenType'),
                         tokenAmount: formData.get('tokenAmount')
                       };
-                      localStorage.setItem('draft_course', JSON.stringify(draftData));
-                      toast({ title: "Course draft saved successfully!" });
+                      saveDraft(draftData);
                     }
                   }}
                   className="text-slate-600 border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-50"
@@ -475,7 +609,7 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
                 <button
                   type="submit"
                   disabled={createCourseMutation.isPending}
-                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                  className="bg-primary-600 text-black px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
                   data-testid="button-create-course-submit"
                 >
                   {createCourseMutation.isPending ? 'Creating...' : 'Create Course'}

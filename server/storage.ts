@@ -180,8 +180,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCoursesByInstructor(walletAddress: string): Promise<Course[]> {
-    // Use instructor field to match wallet address for now
-    return await db.select().from(courses).where(sql`LOWER(${courses.instructor}) LIKE '%${walletAddress.toLowerCase().slice(-6)}%'`);
+    // For now, return courses created by this instructor user
+    const instructorUser = await this.getUserByWalletAddress(walletAddress);
+    if (!instructorUser?.isInstructor) {
+      return [];
+    }
+    
+    // Return courses where instructor contains the display name or wallet
+    return await db.select().from(courses).where(
+      sql`${courses.instructor} LIKE '%${instructorUser.displayName || 'Instructor'}%' OR ${courses.instructor} LIKE '%${walletAddress.slice(-6)}%'`
+    );
   }
 
   async getInstructorAnalytics(walletAddress: string): Promise<{
@@ -243,11 +251,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCourse(courseData: InsertCourse): Promise<Course> {
-    const [course] = await db
-      .insert(courses)
-      .values([courseData])
-      .returning();
-    return course;
+    try {
+      // Ensure token requirement has proper type
+      const tokenReq = courseData.tokenRequirement as any;
+      const safeTokenRequirement = {
+        type: (tokenReq?.type as 'NONE' | 'ERC20' | 'NFT' | 'EITHER') || 'NONE',
+        tokenName: tokenReq?.tokenName || undefined,
+        tokenAddress: tokenReq?.tokenAddress || undefined,
+        minAmount: tokenReq?.minAmount || undefined
+      };
+      
+      const [course] = await db
+        .insert(courses)
+        .values([{
+          ...courseData,
+          tokenRequirement: safeTokenRequirement
+        }])
+        .returning();
+      return course;
+    } catch (error) {
+      console.error("Course creation error:", error);
+      throw error;
+    }
   }
 
   async getEnrollments(userId: string): Promise<Enrollment[]> {
