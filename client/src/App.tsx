@@ -38,7 +38,21 @@ function App() {
     </QueryClientProvider>
   );
 
-  // Only wrap with PrivyProvider if we have a valid App ID
+  // Temporarily disable Privy until domain configuration is complete
+  // To enable Privy authentication, you need to:
+  // 1. Go to dashboard.privy.io 
+  // 2. Select your app with ID: cme35jx9100i6ky0bxiecsetb
+  // 3. Go to Settings > Allowed origins
+  // 4. Add: https://6ac68285-ddeb-45de-b1c5-523386a5591c-00-t7jltvvxcs2h.spock.replit.dev
+  // 5. Save the configuration
+  // 6. Then uncomment the PrivyProvider code below
+  
+  console.log('Privy is disabled until domain configuration is complete');
+  console.log('Your domain to add to Privy: https://6ac68285-ddeb-45de-b1c5-523386a5591c-00-t7jltvvxcs2h.spock.replit.dev');
+  
+  return AppContent;
+
+  /*
   if (PRIVY_APP_ID && PRIVY_APP_ID !== 'your-privy-app-id') {
     return (
       <PrivyProvider
@@ -46,7 +60,7 @@ function App() {
         config={{
           appearance: {
             theme: 'dark',
-            accentColor: '#06b6d4', // cyan-500
+            accentColor: '#06b6d4',
           },
           embeddedWallets: {
             createOnLogin: 'users-without-wallets',
@@ -57,10 +71,8 @@ function App() {
       </PrivyProvider>
     );
   }
-
-  // Fallback without Privy if no valid App ID
-  console.log('Running without Privy - no valid App ID configured');
   return AppContent;
+  */
 }
 
 export default App;
