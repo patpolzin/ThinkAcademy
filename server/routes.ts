@@ -1,0 +1,220 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertUserSchema, insertCourseSchema, insertEnrollmentSchema, insertLiveSessionSchema } from "@shared/schema";
+import { z } from "zod";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth routes
+  app.post("/api/auth/connect-wallet", async (req, res) => {
+    try {
+      const { walletAddress, connectedWalletType, tokenBalances } = req.body;
+      
+      let user = await storage.getUserByWallet(walletAddress);
+      
+      if (!user) {
+        user = await storage.createUser({
+          walletAddress,
+          connectedWalletType,
+          tokenBalances: tokenBalances || {},
+          isEmailAuth: false,
+        });
+      } else {
+        user = await storage.updateUserTokens(user.id, tokenBalances || {});
+      }
+      
+      res.json({ user });
+    } catch (error) {
+      console.error("Wallet connection error:", error);
+      res.status(500).json({ error: "Failed to connect wallet" });
+    }
+  });
+
+  app.post("/api/auth/connect-email", async (req, res) => {
+    try {
+      const { email, walletAddress } = req.body;
+      
+      let user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        user = await storage.createUser({
+          email,
+          walletAddress,
+          connectedWalletType: 'privy-email',
+          isEmailAuth: true,
+          tokenBalances: {},
+        });
+      }
+      
+      res.json({ user });
+    } catch (error) {
+      console.error("Email connection error:", error);
+      res.status(500).json({ error: "Failed to connect with email" });
+    }
+  });
+
+  // User routes
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  app.put("/api/users/:id/tokens", async (req, res) => {
+    try {
+      const { tokenBalances } = req.body;
+      const user = await storage.updateUserTokens(req.params.id, tokenBalances);
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update token balances" });
+    }
+  });
+
+  // Course routes
+  app.get("/api/courses", async (req, res) => {
+    try {
+      const courses = await storage.getCourses();
+      res.json(courses);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch courses" });
+    }
+  });
+
+  app.get("/api/courses/:id", async (req, res) => {
+    try {
+      const course = await storage.getCourse(req.params.id);
+      if (!course) {
+        return res.status(404).json({ error: "Course not found" });
+      }
+      res.json(course);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch course" });
+    }
+  });
+
+  app.post("/api/courses", async (req, res) => {
+    try {
+      const courseData = insertCourseSchema.parse(req.body);
+      const course = await storage.createCourse(courseData);
+      res.json(course);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid course data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create course" });
+    }
+  });
+
+  app.put("/api/courses/:id", async (req, res) => {
+    try {
+      const updates = req.body;
+      const course = await storage.updateCourse(req.params.id, updates);
+      res.json(course);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update course" });
+    }
+  });
+
+  app.delete("/api/courses/:id", async (req, res) => {
+    try {
+      await storage.deleteCourse(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete course" });
+    }
+  });
+
+  // Enrollment routes
+  app.get("/api/enrollments/user/:userId", async (req, res) => {
+    try {
+      const enrollments = await storage.getEnrollmentsByUser(req.params.userId);
+      res.json(enrollments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch enrollments" });
+    }
+  });
+
+  app.get("/api/enrollments/course/:courseId", async (req, res) => {
+    try {
+      const enrollments = await storage.getEnrollmentsByCourse(req.params.courseId);
+      res.json(enrollments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch course enrollments" });
+    }
+  });
+
+  app.post("/api/enrollments", async (req, res) => {
+    try {
+      const enrollmentData = insertEnrollmentSchema.parse(req.body);
+      const enrollment = await storage.createEnrollment(enrollmentData);
+      res.json(enrollment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid enrollment data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create enrollment" });
+    }
+  });
+
+  // Live session routes
+  app.get("/api/live-sessions", async (req, res) => {
+    try {
+      const sessions = await storage.getLiveSessions();
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch live sessions" });
+    }
+  });
+
+  app.post("/api/live-sessions", async (req, res) => {
+    try {
+      const sessionData = insertLiveSessionSchema.parse(req.body);
+      const session = await storage.createLiveSession(sessionData);
+      res.json(session);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid session data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create live session" });
+    }
+  });
+
+  app.put("/api/live-sessions/:id/status", async (req, res) => {
+    try {
+      const { status, attendees } = req.body;
+      const session = await storage.updateLiveSessionStatus(req.params.id, status, attendees);
+      res.json(session);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update session status" });
+    }
+  });
+
+  // Analytics routes
+  app.get("/api/analytics", async (req, res) => {
+    try {
+      const analytics = await storage.getAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  // Forum routes
+  app.get("/api/forums/course/:courseId", async (req, res) => {
+    try {
+      const posts = await storage.getForumPostsByCourse(req.params.courseId);
+      res.json(posts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch forum posts" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
