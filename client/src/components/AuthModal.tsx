@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { X, Mail, Lock, Wallet, BookOpen, Play, Unlock } from 'lucide-react';
+import { X, Mail, Wallet, BookOpen, Play, Unlock, Shield } from 'lucide-react';
 import { useWallet } from './WalletProvider';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -11,13 +10,12 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { connectWallet, isConnected } = useWallet();
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMethod, setLoadingMethod] = useState<'wallet' | 'email' | null>(null);
 
   const handleWalletConnect = async () => {
     setIsLoading(true);
+    setLoadingMethod('wallet');
     try {
       await connectWallet();
       if (isConnected) {
@@ -27,150 +25,120 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       console.error('Wallet connection failed:', error);
     } finally {
       setIsLoading(false);
+      setLoadingMethod(null);
     }
   };
 
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePrivyConnect = async () => {
     setIsLoading(true);
+    setLoadingMethod('email');
     
-    // Mock email authentication
+    // TODO: Integrate with Privy SDK
+    // For Privy integration, you'll need to:
+    // 1. Get your Privy App ID from dashboard.privy.io
+    // 2. Install @privy-io/react-auth package
+    // 3. Wrap your app with PrivyProvider
+    // 4. Use usePrivy() hook for authentication
+    console.log('Privy login would be called here');
+    
+    // Mock Privy authentication for now - creates non-custodial wallet for user
     setTimeout(() => {
       setIsLoading(false);
+      setLoadingMethod(null);
       onClose();
-    }, 1500);
+      // In real implementation, this would create/assign a wallet to the email
+    }, 2000);
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4 relative">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:text-gray-400 dark:hover:text-gray-200"
           data-testid="button-close-auth-modal"
         >
           <X className="w-5 h-5" />
         </button>
 
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-6 h-6 text-primary-500" />
+          <div className="w-12 h-12 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="w-6 h-6 text-cyan-500" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome to <span className="text-cyan-400">U</span>THINK</h2>
-          <p className="text-slate-600">Access token-gated courses and live sessions</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+            Welcome to <span className="text-cyan-400">U</span>THINK
+          </h2>
+          <p className="text-slate-600 dark:text-gray-300">Choose your login method</p>
         </div>
 
         {/* Features Preview */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="text-center">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <Unlock className="w-4 h-4 text-emerald-600" />
+            <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Unlock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <p className="text-xs text-slate-600">Token Access</p>
+            <p className="text-xs text-slate-600 dark:text-gray-300">Token Access</p>
           </div>
           <div className="text-center">
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <Play className="w-4 h-4 text-purple-600" />
+            <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Play className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
-            <p className="text-xs text-slate-600">Live Sessions</p>
+            <p className="text-xs text-slate-600 dark:text-gray-300">Live Sessions</p>
           </div>
           <div className="text-center">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <BookOpen className="w-4 h-4 text-blue-600" />
+            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <p className="text-xs text-slate-600">AI Courses</p>
+            <p className="text-xs text-slate-600 dark:text-gray-300">AI Courses</p>
           </div>
         </div>
 
         <div className="space-y-4">
           {/* Authentication Options */}
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-4">
             <Button
               onClick={handleWalletConnect}
               disabled={isLoading}
               variant="outline"
-              className="w-full flex items-center justify-center space-x-2 border-cyan-200 text-cyan-600 hover:bg-cyan-50"
+              className="w-full flex items-center justify-center space-x-3 p-4 h-auto border-2 border-cyan-200 dark:border-cyan-800 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20"
               data-testid="button-connect-wallet-modal"
             >
-              <Wallet className="w-4 h-4" />
-              <span>{isLoading ? 'Connecting...' : 'Connect MetaMask Wallet'}</span>
+              <div className="w-8 h-8 bg-cyan-100 dark:bg-cyan-900/50 rounded-lg flex items-center justify-center">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium">Connect Wallet</p>
+                <p className="text-xs opacity-75">
+                  {isLoading && loadingMethod === 'wallet' ? 'Connecting...' : 'Use MetaMask or Web3 wallet'}
+                </p>
+              </div>
             </Button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-slate-500">Or continue with email</span>
-              </div>
-            </div>
-
             <Button
-              onClick={() => {/* Toggle to email form */}}
-              className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"
-              data-testid="button-email-auth-toggle"
+              onClick={handlePrivyConnect}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-3 p-4 h-auto bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white"
+              data-testid="button-connect-email"
             >
-              <Mail className="w-4 h-4" />
-              <span>Email + Assigned Wallet</span>
+              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium">Email Login</p>
+                <p className="text-xs opacity-75">
+                  {isLoading && loadingMethod === 'email' ? 'Connecting...' : 'Email + assigned non-custodial wallet'}
+                </p>
+              </div>
             </Button>
           </div>
 
-
-
-          {/* Email Authentication Form */}
-          <form onSubmit={handleEmailAuth} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Email
-              </label>
-              <Input
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                data-testid="input-email"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Password
-              </label>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                data-testid="input-password"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full"
-              variant="outline"
-              data-testid="button-email-auth"
-            >
-              {isLoading ? 'Signing in...' : authMode === 'signin' ? 'Sign In' : 'Sign Up'}
-            </Button>
-          </form>
-
-          <div className="text-center text-sm">
-            <button
-              onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')}
-              className="text-primary-500 hover:text-primary-600"
-              data-testid="button-switch-auth-mode"
-            >
-              {authMode === 'signin' 
-                ? "Don't have an account? Sign up" 
-                : "Already have an account? Sign in"
-              }
-            </button>
+          <div className="text-center">
+            <p className="text-xs text-slate-500 dark:text-gray-400">
+              <Shield className="w-3 h-3 inline mr-1" />
+              Secure, decentralized authentication
+            </p>
           </div>
         </div>
       </div>
