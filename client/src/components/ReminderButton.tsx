@@ -27,13 +27,10 @@ export default function ReminderButton({ session, compact = false }: ReminderBut
 
   const createReminderMutation = useMutation({
     mutationFn: async (reminderTime: string) => {
-      return apiRequest('/api/reminders', {
-        method: 'POST',
-        body: JSON.stringify({
-          userId: address,
-          sessionId: session.id,
-          reminderTime: new Date(reminderTime).toISOString()
-        })
+      return apiRequest('/api/reminders', 'POST', {
+        userId: address,
+        sessionId: session.id,
+        reminderTime: new Date(reminderTime).toISOString()
       });
     },
     onSuccess: () => {
@@ -50,9 +47,7 @@ export default function ReminderButton({ session, compact = false }: ReminderBut
     mutationFn: async () => {
       const reminder = reminders.find((r: any) => r.sessionId === session.id);
       if (reminder) {
-        return apiRequest(`/api/reminders/${reminder.id}`, {
-          method: 'DELETE'
-        });
+        return apiRequest(`/api/reminders/${reminder.id}`, 'DELETE');
       }
     },
     onSuccess: () => {
@@ -96,7 +91,7 @@ export default function ReminderButton({ session, compact = false }: ReminderBut
       >
         {hasReminder ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
         {showReminderOptions && !hasReminder && (
-          <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg z-10 p-2 min-w-[200px]">
+          <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg z-50 p-2 min-w-[200px]">
             <div className="space-y-2">
               <p className="text-sm font-medium text-slate-700 dark:text-gray-300 px-2">Set reminder:</p>
               <button
@@ -149,7 +144,7 @@ export default function ReminderButton({ session, compact = false }: ReminderBut
       </Button>
 
       {showReminderOptions && !hasReminder && (
-        <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg z-10 p-4 min-w-[280px]">
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg shadow-lg z-50 p-4 min-w-[320px]">
           <div className="space-y-3">
             <div className="flex items-center space-x-2 text-slate-700 dark:text-gray-300">
               <Calendar className="w-4 h-4" />

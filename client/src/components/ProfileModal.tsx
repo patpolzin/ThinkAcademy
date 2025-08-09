@@ -21,15 +21,15 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || '',
     bio: user?.bio || '',
-    profilePicture: user?.profilePicture || ''
+    profilePicture: user?.profilePicture || '',
+    contactEmail: user?.contactEmail || '',
+    contactPhone: user?.contactPhone || '',
+    preferredContactMethod: user?.preferredContactMethod || 'email'
   });
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof profileData) => {
-      return apiRequest(`/api/users/${user?.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data)
-      });
+      return apiRequest(`/api/users/${user?.id}`, 'PUT', data);
     },
     onSuccess: () => {
       toast({ title: "Profile updated successfully!" });
@@ -138,6 +138,53 @@ export default function ProfileModal({ isOpen, onClose, user }: ProfileModalProp
                 onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                 data-testid="textarea-bio"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                  Email for Reminders
+                </label>
+                <Input
+                  type="email"
+                  placeholder="your-email@example.com"
+                  value={profileData.contactEmail}
+                  onChange={(e) => setProfileData({ ...profileData, contactEmail: e.target.value })}
+                  data-testid="input-contact-email"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                  Phone for Reminders
+                </label>
+                <Input
+                  type="tel"
+                  placeholder="+1234567890"
+                  value={profileData.contactPhone}
+                  onChange={(e) => setProfileData({ ...profileData, contactPhone: e.target.value })}
+                  data-testid="input-contact-phone"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">
+                Preferred Contact for Reminders
+              </label>
+              <select
+                value={profileData.preferredContactMethod}
+                onChange={(e) => setProfileData({ ...profileData, preferredContactMethod: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-cyan-500 bg-white dark:bg-gray-700 text-slate-900 dark:text-white"
+                data-testid="select-preferred-contact"
+              >
+                <option value="email">Email</option>
+                <option value="phone">Phone/SMS</option>
+                <option value="none">No Reminders</option>
+              </select>
+              <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">
+                Reminders will be sent to your chosen contact method before live sessions.
+              </p>
             </div>
 
             <div>

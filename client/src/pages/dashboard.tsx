@@ -426,6 +426,11 @@ export default function Dashboard() {
                 A token-gated learning platform where knowledge meets blockchain technology. 
                 Connect your wallet using the login button in the top right to access exclusive courses and live sessions.
               </p>
+              <div className="bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg p-4 mb-8">
+                <p className="text-sm text-cyan-700 dark:text-cyan-300">
+                  <strong>Testing Admin/Instructor Features:</strong> Connect a wallet ending in "000" for admin access or "111" for instructor access to test course creation and management features.
+                </p>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-cyan-100 rounded-xl flex items-center justify-center mx-auto mb-4">

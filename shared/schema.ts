@@ -10,6 +10,9 @@ export const users = pgTable("users", {
   displayName: text("display_name"),
   profilePicture: text("profile_picture"),
   bio: text("bio"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  preferredContactMethod: text("preferred_contact_method").default('email'), // 'email', 'phone', 'none'
   isEmailAuth: boolean("is_email_auth").default(false),
   connectedWalletType: text("connected_wallet_type"),
   tokenBalances: jsonb("token_balances").$type<Record<string, string>>().default({}),

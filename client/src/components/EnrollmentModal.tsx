@@ -20,15 +20,12 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
 
   const enrollMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/enrollments', {
-        method: 'POST',
-        body: JSON.stringify({
-          userId: address,
-          courseId: course.id,
-          progress: 0,
-          totalLessons: 10, // Mock value
-          totalAssignments: 3 // Mock value
-        })
+      return apiRequest('/api/enrollments', 'POST', {
+        userId: address,
+        courseId: course.id,
+        progress: 0,
+        totalLessons: 10, // Mock value
+        totalAssignments: 3 // Mock value
       });
     },
     onSuccess: () => {
