@@ -423,6 +423,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Lesson routes
+  app.get('/api/courses/:courseId/lessons', async (req, res) => {
+    try {
+      const lessons = await storage.getLessons(req.params.courseId);
+      res.json(lessons);
+    } catch (error) {
+      console.error('Error fetching lessons:', error);
+      res.status(500).json({ error: 'Failed to fetch lessons' });
+    }
+  });
+
+  app.post('/api/courses/:courseId/lessons', async (req, res) => {
+    try {
+      const lesson = await storage.createLesson({
+        ...req.body,
+        courseId: req.params.courseId
+      });
+      res.json(lesson);
+    } catch (error) {
+      console.error('Error creating lesson:', error);
+      res.status(500).json({ error: 'Failed to create lesson' });
+    }
+  });
+
+  app.put('/api/lessons/:id', async (req, res) => {
+    try {
+      const lesson = await storage.updateLesson(req.params.id, req.body);
+      res.json(lesson);
+    } catch (error) {
+      console.error('Error updating lesson:', error);
+      res.status(500).json({ error: 'Failed to update lesson' });
+    }
+  });
+
+  app.delete('/api/lessons/:id', async (req, res) => {
+    try {
+      await storage.deleteLesson(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting lesson:', error);
+      res.status(500).json({ error: 'Failed to delete lesson' });
+    }
+  });
+
+  // Quiz routes
+  app.get('/api/courses/:courseId/quizzes', async (req, res) => {
+    try {
+      const quizzes = await storage.getQuizzes(req.params.courseId);
+      res.json(quizzes);
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      res.status(500).json({ error: 'Failed to fetch quizzes' });
+    }
+  });
+
+  app.post('/api/courses/:courseId/quizzes', async (req, res) => {
+    try {
+      const quiz = await storage.createQuiz({
+        ...req.body,
+        courseId: req.params.courseId
+      });
+      res.json(quiz);
+    } catch (error) {
+      console.error('Error creating quiz:', error);
+      res.status(500).json({ error: 'Failed to create quiz' });
+    }
+  });
+
+  // Resource routes
+  app.get('/api/courses/:courseId/resources', async (req, res) => {
+    try {
+      const resources = await storage.getResources(req.params.courseId);
+      res.json(resources);
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+      res.status(500).json({ error: 'Failed to fetch resources' });
+    }
+  });
+
+  app.post('/api/courses/:courseId/resources', async (req, res) => {
+    try {
+      const resource = await storage.createResource({
+        ...req.body,
+        courseId: req.params.courseId
+      });
+      res.json(resource);
+    } catch (error) {
+      console.error('Error creating resource:', error);
+      res.status(500).json({ error: 'Failed to create resource' });
+    }
+  });
+
+  // Forum reply routes
+  app.get('/api/forums/:forumId/replies', async (req, res) => {
+    try {
+      const replies = await storage.getForumReplies(req.params.forumId);
+      res.json(replies);
+    } catch (error) {
+      console.error('Error fetching forum replies:', error);
+      res.status(500).json({ error: 'Failed to fetch forum replies' });
+    }
+  });
+
+  app.post('/api/forums/:forumId/replies', async (req, res) => {
+    try {
+      const reply = await storage.createForumReply({
+        ...req.body,
+        forumId: req.params.forumId
+      });
+      res.json(reply);
+    } catch (error) {
+      console.error('Error creating forum reply:', error);
+      res.status(500).json({ error: 'Failed to create forum reply' });
+    }
+  });
+
+  // Enrollment management routes
+  app.post('/api/enrollments', async (req, res) => {
+    try {
+      const { userId, courseId } = req.body;
+      const enrollment = await storage.enrollUser(userId, courseId);
+      res.json(enrollment);
+    } catch (error) {
+      console.error('Error enrolling user:', error);
+      if (error.message.includes('already enrolled')) {
+        res.status(409).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Failed to enroll user' });
+      }
+    }
+  });
+
+  app.delete('/api/enrollments/:userId/:courseId', async (req, res) => {
+    try {
+      await storage.unenrollUser(req.params.userId, req.params.courseId);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error unenrolling user:', error);
+      res.status(500).json({ error: 'Failed to unenroll user' });
+    }
+  });
+
+  app.get('/api/enrollments/:userId/:courseId/check', async (req, res) => {
+    try {
+      const isEnrolled = await storage.checkEnrollment(req.params.userId, req.params.courseId);
+      res.json({ isEnrolled });
+    } catch (error) {
+      console.error('Error checking enrollment:', error);
+      res.status(500).json({ error: 'Failed to check enrollment' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

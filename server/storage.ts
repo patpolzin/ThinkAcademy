@@ -1,4 +1,11 @@
-import { users, courses, enrollments, liveSessions, assignments, forums, reminders, type User, type Course, type Enrollment, type LiveSession, type Assignment, type Forum, type Reminder, type InsertUser, type InsertCourse, type InsertEnrollment, type InsertLiveSession, type InsertAssignment, type InsertForum, type InsertReminder } from "@shared/schema";
+import { 
+  users, courses, enrollments, liveSessions, assignments, forums, reminders, 
+  lessons, quizzes, quizResults, resources, forumReplies, lessonProgress,
+  type User, type Course, type Enrollment, type LiveSession, type Assignment, type Forum, type Reminder,
+  type Lesson, type Quiz, type QuizResult, type Resource, type ForumReply, type LessonProgress,
+  type InsertUser, type InsertCourse, type InsertEnrollment, type InsertLiveSession, type InsertAssignment, 
+  type InsertForum, type InsertReminder, type InsertLesson, type InsertQuiz, type InsertResource, type InsertForumReply
+} from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -63,6 +70,40 @@ interface IStorage {
     totalEnrollments: number;
     avgCompletionRate: number;
   }>;
+
+  // Lessons
+  getLessons(courseId: string): Promise<Lesson[]>;
+  getLesson(id: string): Promise<Lesson | undefined>;
+  createLesson(lessonData: InsertLesson): Promise<Lesson>;
+  updateLesson(id: string, updates: Partial<InsertLesson>): Promise<Lesson>;
+  deleteLesson(id: string): Promise<void>;
+  updateLessonProgress(userId: string, lessonId: string, watchTime: number, isCompleted: boolean): Promise<void>;
+
+  // Quizzes
+  getQuizzes(courseId: string): Promise<Quiz[]>;
+  getQuiz(id: string): Promise<Quiz | undefined>;
+  createQuiz(quizData: InsertQuiz): Promise<Quiz>;
+  updateQuiz(id: string, updates: Partial<InsertQuiz>): Promise<Quiz>;
+  deleteQuiz(id: string): Promise<void>;
+  submitQuizResult(userId: string, quizId: string, answers: Record<string, string>, score: number, totalQuestions: number, isPassed: boolean): Promise<QuizResult>;
+  getUserQuizResults(userId: string, quizId: string): Promise<QuizResult[]>;
+
+  // Resources
+  getResources(courseId: string): Promise<Resource[]>;
+  getResource(id: string): Promise<Resource | undefined>;
+  createResource(resourceData: InsertResource): Promise<Resource>;
+  updateResource(id: string, updates: Partial<InsertResource>): Promise<Resource>;
+  deleteResource(id: string): Promise<void>;
+
+  // Forum Replies
+  getForumReplies(forumId: string): Promise<ForumReply[]>;
+  createForumReply(replyData: InsertForumReply): Promise<ForumReply>;
+  deleteForumReply(id: string): Promise<void>;
+  
+  // Enrollment management
+  enrollUser(userId: string, courseId: string): Promise<Enrollment>;
+  unenrollUser(userId: string, courseId: string): Promise<void>;
+  checkEnrollment(userId: string, courseId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -449,6 +490,190 @@ export class DatabaseStorage implements IStorage {
         avgCompletionRate: 0
       };
     }
+  }
+
+  // Lesson management
+  async getLessons(courseId: string): Promise<Lesson[]> {
+    return await db.select().from(lessons).where(eq(lessons.courseId, courseId));
+  }
+
+  async getLesson(id: string): Promise<Lesson | undefined> {
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, id));
+    return lesson || undefined;
+  }
+
+  async createLesson(lessonData: InsertLesson): Promise<Lesson> {
+    const [lesson] = await db.insert(lessons).values(lessonData).returning();
+    return lesson;
+  }
+
+  async updateLesson(id: string, updates: Partial<InsertLesson>): Promise<Lesson> {
+    const [lesson] = await db.update(lessons)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(lessons.id, id))
+      .returning();
+    return lesson;
+  }
+
+  async deleteLesson(id: string): Promise<void> {
+    await db.delete(lessons).where(eq(lessons.id, id));
+  }
+
+  async updateLessonProgress(userId: string, lessonId: string, watchTime: number, isCompleted: boolean): Promise<void> {
+    const existing = await db.select().from(lessonProgress)
+      .where(and(eq(lessonProgress.userId, userId), eq(lessonProgress.lessonId, lessonId)));
+    
+    if (existing.length > 0) {
+      await db.update(lessonProgress)
+        .set({
+          watchTime,
+          isCompleted,
+          ...(isCompleted ? { completedAt: new Date() } : {}),
+          lastAccessedAt: new Date()
+        })
+        .where(and(eq(lessonProgress.userId, userId), eq(lessonProgress.lessonId, lessonId)));
+    } else {
+      await db.insert(lessonProgress).values({
+        userId,
+        lessonId,
+        watchTime,
+        isCompleted,
+        ...(isCompleted ? { completedAt: new Date() } : {}),
+      });
+    }
+  }
+
+  // Quiz management
+  async getQuizzes(courseId: string): Promise<Quiz[]> {
+    return await db.select().from(quizzes).where(eq(quizzes.courseId, courseId));
+  }
+
+  async getQuiz(id: string): Promise<Quiz | undefined> {
+    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, id));
+    return quiz || undefined;
+  }
+
+  async createQuiz(quizData: InsertQuiz): Promise<Quiz> {
+    const [quiz] = await db.insert(quizzes).values(quizData).returning();
+    return quiz;
+  }
+
+  async updateQuiz(id: string, updates: Partial<InsertQuiz>): Promise<Quiz> {
+    const [quiz] = await db.update(quizzes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(quizzes.id, id))
+      .returning();
+    return quiz;
+  }
+
+  async deleteQuiz(id: string): Promise<void> {
+    await db.delete(quizzes).where(eq(quizzes.id, id));
+  }
+
+  async submitQuizResult(userId: string, quizId: string, answers: Record<string, string>, score: number, totalQuestions: number, isPassed: boolean): Promise<QuizResult> {
+    const [result] = await db.insert(quizResults).values({
+      userId,
+      quizId,
+      answers,
+      score,
+      totalQuestions,
+      isPassed
+    }).returning();
+    return result;
+  }
+
+  async getUserQuizResults(userId: string, quizId: string): Promise<QuizResult[]> {
+    return await db.select().from(quizResults)
+      .where(and(eq(quizResults.userId, userId), eq(quizResults.quizId, quizId)));
+  }
+
+  // Resource management
+  async getResources(courseId: string): Promise<Resource[]> {
+    return await db.select().from(resources).where(eq(resources.courseId, courseId));
+  }
+
+  async getResource(id: string): Promise<Resource | undefined> {
+    const [resource] = await db.select().from(resources).where(eq(resources.id, id));
+    return resource || undefined;
+  }
+
+  async createResource(resourceData: InsertResource): Promise<Resource> {
+    const [resource] = await db.insert(resources).values(resourceData).returning();
+    return resource;
+  }
+
+  async updateResource(id: string, updates: Partial<InsertResource>): Promise<Resource> {
+    const [resource] = await db.update(resources)
+      .set(updates)
+      .where(eq(resources.id, id))
+      .returning();
+    return resource;
+  }
+
+  async deleteResource(id: string): Promise<void> {
+    await db.delete(resources).where(eq(resources.id, id));
+  }
+
+  // Forum replies
+  async getForumReplies(forumId: string): Promise<ForumReply[]> {
+    return await db.select().from(forumReplies).where(eq(forumReplies.forumId, forumId));
+  }
+
+  async createForumReply(replyData: InsertForumReply): Promise<ForumReply> {
+    const [reply] = await db.insert(forumReplies).values(replyData).returning();
+    
+    // Update forum post reply count
+    await db.update(forums)
+      .set({ 
+        replies: sql`${forums.replies} + 1`,
+        lastReplyAt: new Date()
+      })
+      .where(eq(forums.id, replyData.forumId));
+    
+    return reply;
+  }
+
+  async deleteForumReply(id: string): Promise<void> {
+    const [reply] = await db.select().from(forumReplies).where(eq(forumReplies.id, id));
+    if (reply) {
+      await db.delete(forumReplies).where(eq(forumReplies.id, id));
+      
+      // Update forum post reply count
+      await db.update(forums)
+        .set({ replies: sql`${forums.replies} - 1` })
+        .where(eq(forums.id, reply.forumId));
+    }
+  }
+
+  // Enrollment management
+  async enrollUser(userId: string, courseId: string): Promise<Enrollment> {
+    const existing = await db.select().from(enrollments)
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+    
+    if (existing.length > 0) {
+      throw new Error('User is already enrolled in this course');
+    }
+
+    const [enrollment] = await db.insert(enrollments).values({
+      userId,
+      courseId,
+      progress: 0,
+      isCompleted: false,
+      certificateIssued: false
+    }).returning();
+    
+    return enrollment;
+  }
+
+  async unenrollUser(userId: string, courseId: string): Promise<void> {
+    await db.delete(enrollments)
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+  }
+
+  async checkEnrollment(userId: string, courseId: string): Promise<boolean> {
+    const existing = await db.select().from(enrollments)
+      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+    return existing.length > 0;
   }
 }
 

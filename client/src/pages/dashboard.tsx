@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import Navigation from "@/components/Navigation";
 import WalletConnect from "@/components/WalletConnect";
 import CourseCard from "@/components/CourseCard";
@@ -9,9 +10,12 @@ import ProfileModal from "@/components/ProfileModal";
 import AuthModal from "@/components/AuthModal";
 import { useWallet } from "@/components/WalletProvider";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard, User } from "lucide-react";
+import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard, User, Plus, ChevronRight } from "lucide-react";
 import AdminPanel from "@/components/AdminPanel";
 import InstructorPanel from "@/components/InstructorPanel";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
