@@ -180,7 +180,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCoursesByInstructor(walletAddress: string): Promise<Course[]> {
-    return await db.select().from(courses).where(eq(courses.instructorWallet, walletAddress));
+    // Use instructor field to match wallet address for now
+    return await db.select().from(courses).where(sql`LOWER(${courses.instructor}) LIKE '%${walletAddress.toLowerCase().slice(-6)}%'`);
   }
 
   async getInstructorAnalytics(walletAddress: string): Promise<{
@@ -197,8 +198,13 @@ export class DatabaseStorage implements IStorage {
         return { totalStudents: 0, avgCompletion: 0, totalRevenue: 0, activeCourses: 0 };
       }
       
-      const courseEnrollments = await db.select().from(enrollments)
-        .where(courseIds.length > 0 ? sql`${enrollments.courseId} IN (${sql.join(courseIds.map(id => sql`${id}`), sql`, `)})` : sql`1=0`);
+      let courseEnrollments: any[] = [];
+      if (courseIds.length > 0) {
+        for (const courseId of courseIds) {
+          const enrolls = await db.select().from(enrollments).where(eq(enrollments.courseId, courseId));
+          courseEnrollments.push(...enrolls);
+        }
+      }
       
       const totalStudents = new Set(courseEnrollments.map(e => e.userId)).size;
       const avgCompletion = courseEnrollments.length > 0 ? 

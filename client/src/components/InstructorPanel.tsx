@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BookOpen, Users, BarChart3, Settings, Plus, Edit, Trash2, Video, FileText, Award } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,6 +14,19 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
   const [activeInstructorTab, setActiveInstructorTab] = useState('overview');
   const [showCreateCourse, setShowCreateCourse] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [courseDraft, setCourseDraft] = useState<any>(null);
+
+  // Load course draft from localStorage on component mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem('draft_course');
+    if (savedDraft) {
+      try {
+        setCourseDraft(JSON.parse(savedDraft));
+      } catch (error) {
+        console.error('Error loading course draft:', error);
+      }
+    }
+  }, []);
 
   // Fetch instructor's courses only
   const { data: instructorCourses = [] } = useQuery({
@@ -41,6 +54,8 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
       toast({ title: "Course created successfully!" });
       queryClient.invalidateQueries({ queryKey: ['/api/instructor/courses'] });
       queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+      localStorage.removeItem('draft_course'); // Clear draft after successful creation
+      setCourseDraft(null);
       setShowCreateCourse(false);
     },
     onError: () => {
@@ -336,7 +351,7 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
             <form onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
-              createCourseMutation.mutate({
+              const courseData = {
                 title: formData.get('title'),
                 description: formData.get('description'),
                 category: formData.get('category'),
@@ -348,7 +363,13 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
                   tokenName: 'THINK'
                 },
                 isActive: true
-              });
+              };
+              
+              // Save to localStorage first for persistence
+              localStorage.setItem('draft_course', JSON.stringify(courseData));
+              
+              // Then create the course
+              createCourseMutation.mutate(courseData);
             }}>
               <div className="space-y-4">
                 <div>
@@ -357,8 +378,10 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
                     name="title"
                     type="text"
                     required
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    defaultValue={courseDraft?.title || ''}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black"
                     placeholder="Enter course title"
+                    data-testid="input-course-title"
                   />
                 </div>
                 <div>
@@ -367,8 +390,10 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
                     name="description"
                     rows={3}
                     required
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    defaultValue={courseDraft?.description || ''}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black"
                     placeholder="Course description"
+                    data-testid="input-course-description"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -423,9 +448,35 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
               </div>
               <div className="flex space-x-3 mt-6">
                 <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget.closest('form');
+                    if (form) {
+                      const formData = new FormData(form);
+                      const draftData = {
+                        title: formData.get('title'),
+                        description: formData.get('description'),
+                        category: formData.get('category'),
+                        difficulty: formData.get('difficulty'),
+                        duration: formData.get('duration'),
+                        tokenType: formData.get('tokenType'),
+                        tokenAmount: formData.get('tokenAmount')
+                      };
+                      localStorage.setItem('draft_course', JSON.stringify(draftData));
+                      toast({ title: "Course draft saved successfully!" });
+                    }
+                  }}
+                  className="text-slate-600 border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-50"
+                  data-testid="button-save-draft"
+                >
+                  Save Draft
+                </button>
+                <button
                   type="submit"
                   disabled={createCourseMutation.isPending}
                   className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                  data-testid="button-create-course-submit"
                 >
                   {createCourseMutation.isPending ? 'Creating...' : 'Create Course'}
                 </button>
@@ -433,6 +484,7 @@ export default function InstructorPanel({ user }: InstructorPanelProps) {
                   type="button"
                   onClick={() => setShowCreateCourse(false)}
                   className="text-slate-600 border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-50"
+                  data-testid="button-cancel-course"
                 >
                   Cancel
                 </button>
