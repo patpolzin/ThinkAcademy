@@ -8,7 +8,8 @@ Preferred communication style: Simple, everyday language.
 Platform branding: UTHINK with "U" highlighted in cyan color to represent university concept.
 Color scheme: Cyan/teal primary colors with dark mode as default.
 Authentication: MetaMask wallet connection (fully functional) and Privy email+assigned wallet (requires Replit CSP configuration).
-UI: Single "Login" button that opens modal with both authentication options.
+UI: Single "Login" button in header navigation (removed duplicate login button from main content).
+Deployment: Interested in Vercel deployment for full Privy authentication support.
 
 # System Architecture
 
@@ -50,8 +51,8 @@ UI: Single "Login" button that opens modal with both authentication options.
 # External Dependencies
 
 ## Database
-- **Neon Database**: Serverless PostgreSQL hosting
-- **Connection**: WebSocket-based connection pooling
+- **Supabase**: PostgreSQL database with real-time features
+- **Connection**: WebSocket-based connection pooling via @neondatabase/serverless driver
 
 ## Blockchain Integration
 - **Ethers.js**: Ethereum interaction library loaded via CDN
@@ -59,8 +60,9 @@ UI: Single "Login" button that opens modal with both authentication options.
 - **Smart Contracts**: THINK token (ERC-20) and THINK Agent Bundle NFT (ERC-721)
 
 ## Authentication Services
-- **Privy**: Email authentication and wallet management
-- **MetaMask**: Primary wallet connection method
+- **Privy**: Email authentication and wallet management (requires CSP configuration)
+- **MetaMask**: Primary wallet connection method (fully functional)
+- **Note**: Privy blocked in Replit due to CSP headers, works in Vercel deployment
 
 ## Video Conferencing
 - **Daily.co**: Live session video integration (loaded via CDN)
