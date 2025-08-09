@@ -13,14 +13,19 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { connectWallet, isConnected } = useWallet();
   
   // Safe Privy hook usage with fallback
-  let privyState = { login: null, authenticated: false, user: null };
+  let privyLogin: (() => void) | null = null;
+  let privyAuthenticated = false;
+  let privyUser = null;
+  
   try {
-    privyState = usePrivy();
+    const privyState = usePrivy();
+    privyLogin = privyState.login;
+    privyAuthenticated = privyState.authenticated;
+    privyUser = privyState.user;
   } catch (error) {
     console.log('Privy not available:', error);
   }
   
-  const { login, authenticated, user } = privyState;
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMethod, setLoadingMethod] = useState<'wallet' | 'email' | null>(null);
 
@@ -45,10 +50,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setLoadingMethod('email');
     
     try {
-      if (login) {
-        await login();
-        if (authenticated) {
-          console.log('Privy authentication successful:', user);
+      if (privyLogin) {
+        privyLogin();
+        if (privyAuthenticated) {
+          console.log('Privy authentication successful:', privyUser);
           onClose();
         }
       } else {

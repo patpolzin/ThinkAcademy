@@ -27,7 +27,6 @@ function Router() {
 }
 
 function App() {
-  // Conditional Privy Provider based on valid app ID
   const AppContent = (
     <QueryClientProvider client={queryClient}>
       <WalletProvider>
@@ -39,8 +38,8 @@ function App() {
     </QueryClientProvider>
   );
 
-  // Try to wrap with PrivyProvider, fallback to basic app if configuration fails
-  try {
+  // Only wrap with PrivyProvider if we have a valid App ID
+  if (PRIVY_APP_ID && PRIVY_APP_ID !== 'your-privy-app-id') {
     return (
       <PrivyProvider
         appId={PRIVY_APP_ID}
@@ -57,10 +56,11 @@ function App() {
         {AppContent}
       </PrivyProvider>
     );
-  } catch (error) {
-    console.log('Privy Provider initialization failed, running without Privy:', error);
-    return AppContent;
   }
+
+  // Fallback without Privy if no valid App ID
+  console.log('Running without Privy - no valid App ID configured');
+  return AppContent;
 }
 
 export default App;
