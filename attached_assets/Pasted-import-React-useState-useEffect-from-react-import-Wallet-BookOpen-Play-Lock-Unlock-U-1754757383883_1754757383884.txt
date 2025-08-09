@@ -1,0 +1,2508 @@
+import React, { useState, useEffect } from 'react';
+import { Wallet, BookOpen, Play, Lock, Unlock, Users, Settings, Home, Video, Trophy, Bell, Loader2, Check, X, Key, AlertCircle, Calendar, Clock, Circle, Eye, EyeOff, FileText, Brain, MessageCircle, BarChart3, Award, Upload, Download, Star, TrendingUp, PlusCircle } from 'lucide-react';
+
+// Record icon component (for recording indicator)
+const Record = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="12" r="10" />
+  </svg>
+);
+
+// Load ethers.js from CDN
+const loadEthers = () => {
+  return new Promise((resolve, reject) => {
+    if (window.ethers) {
+      resolve(window.ethers);
+      return;
+    }
+    
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js';
+    script.onload = () => resolve(window.ethers);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
+
+// Load Privy from CDN
+const loadPrivy = () => {
+  return new Promise((resolve, reject) => {
+    if (window.PrivyProvider) {
+      resolve();
+      return;
+    }
+    
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@privy-io/react-auth@1.52.0/dist/index.umd.js';
+    script.onload = () => resolve();
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
+
+// Load Daily.co from CDN
+const loadDaily = () => {
+  return new Promise((resolve, reject) => {
+    if (window.DailyIframe) {
+      resolve();
+      return;
+    }
+    
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@daily-co/daily-js@0.55.0/dist/daily-iframe.js';
+    script.onload = () => resolve();
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
+
+// Contract addresses
+const THINK_TOKEN_ADDRESS = "0xF9ff95468cb9A0cD57b8542bbc4c148e290Ff465";
+const THINK_NFT_ADDRESS = "0x11b3efbf04f0ba505f380ac20444b6952970ada6";
+
+// ERC-20 ABI (minimal - just what we need)
+const ERC20_ABI = [
+  "function balanceOf(address owner) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+  "function symbol() view returns (string)"
+];
+
+// ERC-721 ABI (minimal - just what we need)
+const ERC721_ABI = [
+  "function balanceOf(address owner) view returns (uint256)",
+  "function name() view returns (string)"
+];
+
+// RPC endpoint - using a free public RPC
+const RPC_URL = "https://ethereum-rpc.publicnode.com";
+
+// Mock live sessions data
+const mockLiveSessions = [
+  {
+    id: 1,
+    title: "DeFi Yield Farming Strategies",
+    instructor: "Alex Chen",
+    courseId: 1,
+    scheduledTime: "2025-08-08T19:00:00Z",
+    duration: 60,
+    status: "live", // live, scheduled, ended
+    attendees: 23,
+    maxAttendees: 100,
+    recordingEnabled: true,
+    tokenRequirement: {
+      type: "ERC20",
+      tokenName: "THINK",
+      minAmount: "2500"
+    },
+    roomUrl: "https://your-domain.daily.co/private-room-1",
+    recordingUrl: null
+  },
+  {
+    id: 2,
+    title: "NFT Minting Workshop",
+    instructor: "Sarah Kim",
+    courseId: 2,
+    scheduledTime: "2025-08-09T18:00:00Z",
+    duration: 90,
+    status: "scheduled",
+    attendees: 0,
+    maxAttendees: 50,
+    recordingEnabled: true,
+    tokenRequirement: {
+      type: "NFT",
+      tokenName: "THINK Agent Bundle",
+      minAmount: "1"
+    },
+    roomUrl: "https://your-domain.daily.co/private-room-2",
+    recordingUrl: null
+  },
+  {
+    id: 3,
+    title: "Smart Contract Security",
+    instructor: "Mike Rodriguez",
+    courseId: 3,
+    scheduledTime: "2025-08-07T20:00:00Z",
+    duration: 45,
+    status: "ended",
+    attendees: 18,
+    maxAttendees: 75,
+    recordingEnabled: true,
+    tokenRequirement: {
+      type: "EITHER",
+      options: [
+        { type: "ERC20", tokenName: "THINK", minAmount: "2500" },
+        { type: "NFT", tokenName: "THINK Agent Bundle", minAmount: "1" }
+      ]
+    },
+    roomUrl: "https://your-domain.daily.co/private-room-3",
+    recordingUrl: "https://your-domain.daily.co/recordings/session-3.mp4"
+  }
+];
+const mockCourses = [
+  {
+    id: 1,
+    title: "Advanced AI Agent Strategies",
+    instructor: "Alex Chen",
+    duration: "6 weeks",
+    students: 142,
+    image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=250&fit=crop",
+    isLive: true,
+    progress: 65,
+    totalLessons: 24,
+    completedLessons: 16,
+    assignments: 8,
+    completedAssignments: 5,
+    quizzes: 6,
+    completedQuizzes: 4,
+    enrolledDate: "2025-07-01",
+    lastAccessed: "2025-08-07",
+    tokenRequirement: {
+      type: "ERC20",
+      tokenAddress: "0xF9ff95468cb9A0cD57b8542bbc4c148e290Ff465",
+      tokenName: "THINK",
+      minAmount: "2500"
+    },
+    lessons: [
+      { id: 1, title: "Introduction to AI Agents", duration: "45 min", completed: true, type: "video" },
+      { id: 2, title: "Agent Architecture Fundamentals", duration: "60 min", completed: true, type: "video" },
+      { id: 3, title: "Building Your First Agent", duration: "90 min", completed: false, type: "hands-on" },
+    ]
+  },
+  {
+    id: 2,
+    title: "AI Agent Bundle Masterclass",
+    instructor: "Sarah Kim",
+    duration: "4 weeks",
+    students: 89,
+    image: "https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=400&h=250&fit=crop",
+    isLive: false,
+    progress: 30,
+    totalLessons: 16,
+    completedLessons: 5,
+    assignments: 4,
+    completedAssignments: 1,
+    quizzes: 4,
+    completedQuizzes: 2,
+    enrolledDate: "2025-07-15",
+    lastAccessed: "2025-08-06",
+    tokenRequirement: {
+      type: "NFT",
+      tokenAddress: "0x11b3efbf04f0ba505f380ac20444b6952970ada6",
+      tokenName: "THINK Agent Bundle",
+      minAmount: "1"
+    },
+    lessons: [
+      { id: 1, title: "NFT Fundamentals", duration: "40 min", completed: true, type: "video" },
+      { id: 2, title: "Agent Bundle Overview", duration: "50 min", completed: true, type: "reading" },
+      { id: 3, title: "Deploying Agent Bundles", duration: "80 min", completed: false, type: "hands-on" },
+    ]
+  },
+  {
+    id: 3,
+    title: "THINK Ecosystem Deep Dive",
+    instructor: "Mike Rodriguez",
+    duration: "8 weeks",
+    students: 256,
+    image: "https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=250&fit=crop",
+    isLive: false,
+    progress: 85,
+    totalLessons: 32,
+    completedLessons: 27,
+    assignments: 12,
+    completedAssignments: 10,
+    quizzes: 8,
+    completedQuizzes: 7,
+    enrolledDate: "2025-06-10",
+    lastAccessed: "2025-08-08",
+    tokenRequirement: {
+      type: "EITHER",
+      options: [
+        {
+          type: "ERC20",
+          tokenAddress: "0xF9ff95468cb9A0cD57b8542bbc4c148e290Ff465",
+          tokenName: "THINK",
+          minAmount: "2500"
+        },
+        {
+          type: "NFT",
+          tokenAddress: "0x11b3efbf04f0ba505f380ac20444b6952970ada6",
+          tokenName: "THINK Agent Bundle",
+          minAmount: "1"
+        }
+      ]
+    },
+    lessons: [
+      { id: 1, title: "THINK Token Economics", duration: "55 min", completed: true, type: "video" },
+      { id: 2, title: "Ecosystem Governance", duration: "45 min", completed: true, type: "reading" },
+      { id: 3, title: "DeFi Integration Workshop", duration: "120 min", completed: true, type: "hands-on" },
+    ]
+  }
+];
+
+// Mock assignments data
+const mockAssignments = [
+  {
+    id: 1,
+    courseId: 1,
+    title: "Build a Simple Trading Agent",
+    description: "Create an AI agent that can perform basic trading operations",
+    dueDate: "2025-08-15",
+    points: 100,
+    submitted: false,
+    status: "pending",
+    instructions: "Follow the provided template to build your first trading agent...",
+    attachments: ["template.py", "requirements.txt"]
+  },
+  {
+    id: 2,
+    courseId: 1,
+    title: "Agent Risk Management System",
+    description: "Implement risk management for your AI agent",
+    dueDate: "2025-08-20",
+    points: 150,
+    submitted: true,
+    status: "graded",
+    grade: 85,
+    feedback: "Great work on the implementation! Consider adding more edge cases.",
+    instructions: "Build a comprehensive risk management system...",
+    attachments: ["risk_template.py"]
+  }
+];
+
+// Mock quizzes data
+const mockQuizzes = [
+  {
+    id: 1,
+    courseId: 1,
+    title: "AI Agent Fundamentals Quiz",
+    description: "Test your understanding of basic AI agent concepts",
+    questions: 10,
+    timeLimit: 30,
+    attempts: 3,
+    bestScore: 85,
+    lastAttempt: "2025-08-05",
+    status: "completed"
+  },
+  {
+    id: 2,
+    courseId: 1,
+    title: "Trading Strategies Assessment",
+    description: "Evaluate your knowledge of different trading strategies",
+    questions: 15,
+    timeLimit: 45,
+    attempts: 2,
+    bestScore: null,
+    lastAttempt: null,
+    status: "available"
+  }
+];
+
+// Mock forum posts
+const mockForumPosts = [
+  {
+    id: 1,
+    courseId: 1,
+    title: "Help with Agent Configuration",
+    author: "student@example.com",
+    authorName: "John Doe",
+    content: "I'm having trouble configuring my agent for the first assignment. Can anyone help?",
+    replies: 3,
+    lastReply: "2025-08-07T14:30:00Z",
+    category: "Technical Help",
+    isResolved: false
+  },
+  {
+    id: 2,
+    courseId: 1,
+    title: "Best Practices for Risk Management",
+    author: "alex.chen@edudao.com",
+    authorName: "Alex Chen",
+    content: "Here are some industry best practices I wanted to share...",
+    replies: 8,
+    lastReply: "2025-08-08T09:15:00Z",
+    category: "Discussion",
+    isResolved: false
+  }
+];
+
+// Mock analytics data
+const mockAnalytics = {
+  totalStudents: 487,
+  activeCourses: 3,
+  completionRate: 68,
+  averageGrade: 82,
+  totalHoursSpent: 2847,
+  certificatesIssued: 156,
+  forumPosts: 234,
+  liveSessionsAttended: 45,
+  monthlyActive: [65, 78, 82, 91, 88, 95, 102, 98],
+  courseProgress: [
+    { course: "AI Agent Strategies", completion: 65, students: 142 },
+    { course: "Agent Bundle Masterclass", completion: 30, students: 89 },
+    { course: "THINK Ecosystem", completion: 85, students: 256 }
+  ]
+};
+
+const LearningDashboard = () => {
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState('');
+  const [userTokens, setUserTokens] = useState({});
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
+  const [chainId, setChainId] = useState(null);
+  const [ethersProvider, setEthersProvider] = useState(null);
+  const [connectedWalletType, setConnectedWalletType] = useState(null);
+  
+  // Privy configuration state
+  const [privyAppId] = useState('cme35jx9100i6ky0bxiecsetb'); // Your Privy App ID
+  const [privyConfigured, setPrivyConfigured] = useState(false);
+  const [privyLoaded, setPrivyLoaded] = useState(false);
+  const [privyError, setPrivyError] = useState('');
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  
+  // Authentication state
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMethod, setAuthMethod] = useState(null); // 'wallet', 'email', or null
+  const [userEmail, setUserEmail] = useState('');
+  const [isEmailAuth, setIsEmailAuth] = useState(false);
+  const [emailLoginStep, setEmailLoginStep] = useState('email'); // 'email', 'code', 'success'
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Live streaming state
+  const [liveSessions, setLiveSessions] = useState(mockLiveSessions);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [showLiveModal, setShowLiveModal] = useState(false);
+  const [dailyLoaded, setDailyLoaded] = useState(false);
+  const [inLiveSession, setInLiveSession] = useState(false);
+  const [sessionAccess, setSessionAccess] = useState({});
+
+  // Course management state
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [showCourseModal, setShowCourseModal] = useState(false);
+  const [assignments, setAssignments] = useState(mockAssignments);
+  const [quizzes, setQuizzes] = useState(mockQuizzes);
+  const [forumPosts, setForumPosts] = useState(mockForumPosts);
+  const [analytics, setAnalytics] = useState(mockAnalytics);
+  
+  // Assignment/Quiz state
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [showQuizModal, setShowQuizModal] = useState(false);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  
+  // Forum state
+  const [showForumModal, setShowForumModal] = useState(false);
+  const [selectedForumPost, setSelectedForumPost] = useState(null);
+  const [newForumPost, setNewForumPost] = useState({ title: '', content: '', category: 'Discussion' });
+  
+  // Progress tracking
+  const [userProgress, setUserProgress] = useState({
+    coursesEnrolled: 3,
+    coursesCompleted: 1,
+    totalHoursSpent: 127,
+    certificatesEarned: 1,
+    currentStreak: 7,
+    assignmentsSubmitted: 12,
+    quizzesCompleted: 8,
+    forumParticipation: 15
+  });
+
+  // Initialize Privy with your App ID
+  const initializePrivy = async () => {
+    try {
+      setTestingConnection(true);
+      setPrivyError('');
+
+      // Load Privy SDK
+      await loadPrivy();
+      
+      // Your app is already configured with the App ID
+      setPrivyConfigured(true);
+      setPrivyLoaded(true);
+      
+      console.log('Privy initialized successfully with App ID:', privyAppId);
+      
+    } catch (error) {
+      console.error('Failed to initialize Privy:', error);
+      setPrivyError(error.message);
+      setPrivyConfigured(false);
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  // Auto-initialize Privy on mount
+  useEffect(() => {
+    initializePrivy();
+    loadDaily().then(() => setDailyLoaded(true)).catch(console.error);
+  }, []);
+
+  // Check session access for all sessions when wallet connects
+  useEffect(() => {
+    if (walletConnected && !isLoadingTokens) {
+      const access = {};
+      liveSessions.forEach(session => {
+        access[session.id] = checkSessionAccess(session);
+      });
+      setSessionAccess(access);
+    }
+  }, [walletConnected, userTokens, isLoadingTokens]);
+
+  // Query real token balances from blockchain
+  const queryTokenBalances = async (address, provider) => {
+    try {
+      setIsLoadingTokens(true);
+      
+      // Create contract instances
+      const thinkTokenContract = new window.ethers.Contract(THINK_TOKEN_ADDRESS, ERC20_ABI, provider);
+      const thinkNFTContract = new window.ethers.Contract(THINK_NFT_ADDRESS, ERC721_ABI, provider);
+
+      // Query THINK token balance
+      const [thinkBalance, thinkDecimals] = await Promise.all([
+        thinkTokenContract.balanceOf(address),
+        thinkTokenContract.decimals()
+      ]);
+
+      // Query THINK Agent Bundle NFT balance
+      const nftBalance = await thinkNFTContract.balanceOf(address);
+
+      // Format the balances
+      const formattedThinkBalance = window.ethers.formatUnits(thinkBalance, thinkDecimals);
+      const formattedNFTBalance = nftBalance.toString();
+
+      console.log('Token Balances:', {
+        THINK: formattedThinkBalance,
+        NFT: formattedNFTBalance
+      });
+
+      return {
+        'THINK': formattedThinkBalance,
+        'THINK_AGENT_BUNDLE': formattedNFTBalance,
+      };
+    } catch (error) {
+      console.error('Error querying token balances:', error);
+      
+      // Return fallback mock data if blockchain query fails
+      return {
+        'THINK': '0',
+        'THINK_AGENT_BUNDLE': '0',
+      };
+    } finally {
+      setIsLoadingTokens(false);
+    }
+  };
+
+  // Connect wallet via Privy (with fallback if Privy not ready)
+  const connectWalletPrivy = async () => {
+    setIsConnecting(true);
+    
+    try {
+      // Load ethers.js if not already loaded
+      await loadEthers();
+
+      // If Privy is configured, log that we're using it
+      if (privyConfigured) {
+        console.log('Connecting with Privy App ID:', privyAppId);
+      } else {
+        console.log('Privy loading in background, using direct wallet connection');
+      }
+      
+      // For this demo, simulate Privy wallet selection and connection
+      const walletTypes = ['MetaMask', 'Coinbase Wallet', 'WalletConnect', 'Rainbow', 'Trust Wallet'];
+      const selectedWallet = walletTypes[Math.floor(Math.random() * walletTypes.length)];
+      
+      // Simulate connection delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Try to connect to actual wallet if available, otherwise use mock
+      let actualProvider = null;
+      let actualAddress = null;
+
+      if (window.ethereum) {
+        try {
+          // Try to connect to real wallet
+          const accounts = await window.ethereum.request({
+            method: 'eth_requestAccounts',
+          });
+          if (accounts.length > 0) {
+            actualAddress = accounts[0];
+            actualProvider = new window.ethers.BrowserProvider(window.ethereum);
+            
+            // Get actual chain ID
+            const chainId = await window.ethereum.request({
+              method: 'eth_chainId',
+            });
+            setChainId(parseInt(chainId, 16));
+          }
+        } catch (error) {
+          console.log('Real wallet connection failed, using mock:', error);
+        }
+      }
+      
+      // Use real connection if available, otherwise fallback to mock
+      const finalAddress = actualAddress || '0x742d35Cc6434C0532925a3b5F3FBdA82b45234567';
+      const finalProvider = actualProvider || new window.ethers.JsonRpcProvider(RPC_URL);
+      
+      if (!actualProvider) {
+        setChainId(1); // Ethereum mainnet for mock
+      }
+      
+      setWalletAddress(finalAddress);
+      setWalletConnected(true);
+      setConnectedWalletType('privy-wallet');
+      setEthersProvider(finalProvider);
+      setIsEmailAuth(false);
+      setShowAuthModal(false);
+
+      // Query real token balances
+      const tokenBalances = await queryTokenBalances(finalAddress, finalProvider);
+      setUserTokens(tokenBalances);
+      
+      console.log(`Connected via wallet (${actualProvider ? 'real' : 'mock'}) with ${selectedWallet}`);
+      
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+      alert('Error connecting to wallet. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  // Connect via email - Creates embedded wallet (with fallback if Privy not ready)
+  const connectEmailPrivy = async (email) => {
+    setIsLoggingIn(true);
+    
+    try {
+      // If Privy is configured, log that we're using it
+      if (privyConfigured) {
+        console.log('Starting Privy email authentication for:', email);
+      } else {
+        console.log('Privy loading in background, creating mock embedded wallet for:', email);
+      }
+      
+      // Simulate sending verification code
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setUserEmail(email);
+      setEmailLoginStep('code');
+      
+      console.log('Verification code sent to:', email);
+      
+    } catch (error) {
+      console.error('Failed to send verification code:', error);
+      alert('Error sending verification code. Please try again.');
+      setEmailLoginStep('email');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Verify email code - Creates embedded wallet for user
+  const verifyEmailCode = async (code) => {
+    setIsLoggingIn(true);
+    
+    try {
+      console.log('Verifying code:', code);
+      
+      // Simulate verification delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // For demo, any 6-digit code works
+      if (code.length === 6) {
+        // Create a deterministic embedded wallet address based on user email
+        const emailHash = btoa(userEmail).replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+        const mockEmbeddedWalletAddress = `0x${emailHash}${'0'.repeat(32 - emailHash.length)}abc123`;
+        
+        setWalletAddress(mockEmbeddedWalletAddress);
+        setWalletConnected(true);
+        setConnectedWalletType('privy-email');
+        setIsEmailAuth(true);
+        setEmailLoginStep('success');
+        setShowAuthModal(false);
+        
+        // For email auth, use embedded wallet provider
+        const embeddedProvider = new window.ethers.JsonRpcProvider(RPC_URL);
+        setEthersProvider(embeddedProvider);
+        setChainId(1);
+        
+        // Set demo token balances for email users
+        const mockTokenBalances = {
+          'THINK': '5000.00',
+          'THINK_AGENT_BUNDLE': '2',
+        };
+        setUserTokens(mockTokenBalances);
+        
+        if (privyConfigured) {
+          console.log('Privy email authentication successful - Embedded wallet created:', mockEmbeddedWalletAddress);
+        } else {
+          console.log('Mock embedded wallet created for email user:', mockEmbeddedWalletAddress);
+        }
+        console.log('User email:', userEmail);
+      } else {
+        throw new Error('Invalid verification code');
+      }
+      
+    } catch (error) {
+      console.error('Failed to verify email code:', error);
+      alert('Invalid verification code. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Open authentication modal
+  const openAuthModal = () => {
+    setShowAuthModal(true);
+    setAuthMethod(null);
+    setEmailLoginStep('email');
+    setVerificationCode('');
+    setUserEmail('');
+  };
+
+  const disconnectWallet = () => {
+    setWalletConnected(false);
+    setWalletAddress('');
+    setUserTokens({});
+    setChainId(null);
+    setEthersProvider(null);
+    setIsLoadingTokens(false);
+    setConnectedWalletType(null);
+    setSessionAccess({});
+    setInLiveSession(false);
+    setIsEmailAuth(false);
+    setUserEmail('');
+    setEmailLoginStep('email');
+    setVerificationCode('');
+  };
+
+  // Check if user has access to a live session
+  const checkSessionAccess = (session) => {
+    if (!walletConnected) return false;
+    
+    const { tokenRequirement } = session;
+
+    // Handle "EITHER" type requirements
+    if (tokenRequirement.type === "EITHER") {
+      return tokenRequirement.options.some(option => {
+        if (option.type === "ERC20") {
+          const userBalance = userTokens[option.tokenName] || '0';
+          return parseFloat(userBalance) >= parseFloat(option.minAmount);
+        } else if (option.type === "NFT") {
+          const userNFTs = userTokens['THINK_AGENT_BUNDLE'] || '0';
+          return parseFloat(userNFTs) >= parseFloat(option.minAmount);
+        }
+        return false;
+      });
+    }
+
+    // Handle single token requirements
+    if (tokenRequirement.type === "ERC20") {
+      const userBalance = userTokens[tokenRequirement.tokenName] || '0';
+      return parseFloat(userBalance) >= parseFloat(tokenRequirement.minAmount);
+    } else if (tokenRequirement.type === "NFT") {
+      const userNFTs = userTokens['THINK_AGENT_BUNDLE'] || '0';
+      return parseFloat(userNFTs) >= parseFloat(tokenRequirement.minAmount);
+    }
+
+    return false;
+  };
+
+  // Join a live session
+  const joinLiveSession = async (session) => {
+    if (!sessionAccess[session.id]) {
+      alert('You do not have the required tokens to access this session.');
+      return;
+    }
+
+    if (!dailyLoaded) {
+      alert('Live streaming is loading. Please try again in a moment.');
+      return;
+    }
+
+    setSelectedSession(session);
+    setShowLiveModal(true);
+    setInLiveSession(true);
+
+    // In a real implementation, this would:
+    // 1. Generate a secure access token for the user
+    // 2. Create or join the Daily.co room
+    // 3. Start recording if enabled
+    // 4. Update attendee count
+    
+    console.log('Joining session:', session.title);
+    console.log('Room URL would be:', session.roomUrl);
+  };
+
+  // Leave live session
+  const leaveLiveSession = () => {
+    setShowLiveModal(false);
+    setSelectedSession(null);
+    setInLiveSession(false);
+  };
+
+  // Get time formatting helpers
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  const getSessionStatusColor = (status) => {
+    switch (status) {
+      case 'live': return 'text-red-400 bg-red-900';
+      case 'scheduled': return 'text-blue-400 bg-blue-900';
+      case 'ended': return 'text-gray-400 bg-gray-700';
+      default: return 'text-gray-400 bg-gray-700';
+    }
+  };
+
+  const checkTokenAccess = (course) => {
+    if (!walletConnected) return false;
+    
+    const { tokenRequirement } = course;
+
+    // Handle "EITHER" type requirements (THINK tokens OR NFT)
+    if (tokenRequirement.type === "EITHER") {
+      return tokenRequirement.options.some(option => {
+        if (option.type === "ERC20") {
+          const userBalance = userTokens[option.tokenName] || '0';
+          return parseFloat(userBalance) >= parseFloat(option.minAmount);
+        } else if (option.type === "NFT") {
+          const userNFTs = userTokens['THINK_AGENT_BUNDLE'] || '0';
+          return parseFloat(userNFTs) >= parseFloat(option.minAmount);
+        }
+        return false;
+      });
+    }
+
+    // Handle single token requirements
+    if (tokenRequirement.type === "ERC20") {
+      const userBalance = userTokens[tokenRequirement.tokenName] || '0';
+      return parseFloat(userBalance) >= parseFloat(tokenRequirement.minAmount);
+    } else if (tokenRequirement.type === "NFT") {
+      const userNFTs = userTokens['THINK_AGENT_BUNDLE'] || '0';
+      return parseFloat(userNFTs) >= parseFloat(tokenRequirement.minAmount);
+    }
+
+    return false;
+  };
+
+  const getNetworkName = (chainId) => {
+    switch (chainId) {
+      case 1: return 'Ethereum Mainnet';
+      case 11155111: return 'Sepolia Testnet';
+      case 5: return 'Goerli Testnet';
+      default: return `Chain ${chainId}`;
+    }
+  };
+
+  const getWalletDisplayName = (walletType) => {
+    switch (walletType) {
+      case 'privy-wallet': return 'External Wallet';
+      case 'privy-email': return 'Embedded Wallet';
+      case 'metamask': return 'MetaMask';
+      case 'coinbase': return 'Coinbase Wallet';
+      default: return 'Wallet';
+    }
+  };
+
+  // Authentication Modal Component
+  const AuthModal = () => {
+    if (!showAuthModal) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="bg-gray-800 rounded-xl w-full max-w-md mx-4 border border-gray-700">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+            <h2 className="text-xl font-bold text-white">Connect to EduDAO</h2>
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-6">
+            {!authMethod && (
+              <div className="space-y-4">
+                <p className="text-gray-300 text-center mb-6">
+                  Choose how you'd like to connect to access token-gated courses
+                </p>
+
+                {/* Wallet Connection Option */}
+                <button
+                  onClick={() => {
+                    setAuthMethod('wallet');
+                    connectWalletPrivy();
+                  }}
+                  disabled={isConnecting}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed px-6 py-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-3 text-white"
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="w-5 h-5" />
+                      Connect External Wallet
+                    </>
+                  )}
+                </button>
+                
+                <div className="text-xs text-gray-400 text-center">
+                  MetaMask, Coinbase Wallet, WalletConnect + 300 more
+                </div>
+
+                <div className="flex items-center gap-4 my-6">
+                  <div className="flex-1 h-px bg-gray-600"></div>
+                  <span className="text-gray-400 text-sm">or</span>
+                  <div className="flex-1 h-px bg-gray-600"></div>
+                </div>
+
+                {/* Email Connection Option - Creates Embedded Wallet */}
+                <button
+                  onClick={() => setAuthMethod('email')}
+                  className="w-full bg-green-600 hover:bg-green-700 px-6 py-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-3 text-white"
+                >
+                  <Key className="w-5 h-5" />
+                  Continue with Email
+                </button>
+                
+                <div className="text-xs text-gray-400 text-center">
+                  Sign in with email - we'll create a wallet for you
+                </div>
+              </div>
+            )}
+
+            {authMethod === 'email' && (
+              <div className="space-y-4">
+                {emailLoginStep === 'email' && (
+                  <>
+                    <div className="text-center mb-6">
+                      <Key className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                      <h3 className="text-lg font-semibold text-white mb-2">Sign in with Email</h3>
+                      <p className="text-gray-400 text-sm">
+                        We'll send you a verification code and create an embedded wallet for you
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={userEmail}
+                        onChange={(e) => setUserEmail(e.target.value)}
+                        placeholder="your@email.com"
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        disabled={isLoggingIn}
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => connectEmailPrivy(userEmail)}
+                      disabled={!userEmail || isLoggingIn}
+                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      {isLoggingIn ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Sending Code...
+                        </>
+                      ) : (
+                        'Send Verification Code'
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setAuthMethod(null)}
+                      className="w-full text-gray-400 hover:text-white text-sm py-2 transition-colors"
+                    >
+                      ← Back to options
+                    </button>
+                  </>
+                )}
+
+                {emailLoginStep === 'code' && (
+                  <>
+                    <div className="text-center mb-6">
+                      <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Check className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-white mb-2">Check Your Email</h3>
+                      <p className="text-gray-400 text-sm">
+                        We sent a verification code to <strong>{userEmail}</strong>
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Verification Code
+                      </label>
+                      <input
+                        type="text"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="123456"
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-center text-lg tracking-widest"
+                        disabled={isLoggingIn}
+                        maxLength={6}
+                      />
+                      <p className="text-xs text-gray-400 mt-1 text-center">
+                        Enter the 6-digit code from your email
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => verifyEmailCode(verificationCode)}
+                      disabled={verificationCode.length !== 6 || isLoggingIn}
+                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      {isLoggingIn ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Creating Wallet...
+                        </>
+                      ) : (
+                        'Verify & Create Wallet'
+                      )}
+                    </button>
+
+                    <div className="flex justify-between text-sm">
+                      <button
+                        onClick={() => setEmailLoginStep('email')}
+                        className="text-gray-400 hover:text-white transition-colors"
+                      >
+                        ← Change email
+                      </button>
+                      <button
+                        onClick={() => connectEmailPrivy(userEmail)}
+                        disabled={isLoggingIn}
+                        className="text-green-400 hover:text-green-300 transition-colors disabled:opacity-50"
+                      >
+                        Resend code
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-gray-700 rounded-b-xl">
+            <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              Secure Authentication with Wallet & Email Support
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Course Detail Modal Component
+  const CourseDetailModal = () => {
+    if (!showCourseModal || !selectedCourse) return null;
+
+    const courseAssignments = assignments.filter(a => a.courseId === selectedCourse.id);
+    const courseQuizzes = quizzes.filter(q => q.courseId === selectedCourse.id);
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="bg-gray-800 rounded-xl w-full max-w-4xl mx-4 my-4 max-h-[90vh] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+            <div>
+              <h2 className="text-2xl font-bold text-white">{selectedCourse.title}</h2>
+              <p className="text-gray-400">by {selectedCourse.instructor}</p>
+            </div>
+            <button
+              onClick={() => setShowCourseModal(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+            {/* Progress Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-400">Overall Progress</span>
+                  <span className="text-white font-bold">{selectedCourse.progress}%</span>
+                </div>
+                <div className="w-full bg-gray-600 rounded-full h-2">
+                  <div 
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${selectedCourse.progress}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-700 rounded-lg p-4">
+                <div className="text-gray-400 text-sm">Lessons</div>
+                <div className="text-white text-xl font-bold">
+                  {selectedCourse.completedLessons}/{selectedCourse.totalLessons}
+                </div>
+              </div>
+              
+              <div className="bg-gray-700 rounded-lg p-4">
+                <div className="text-gray-400 text-sm">Assignments</div>
+                <div className="text-white text-xl font-bold">
+                  {selectedCourse.completedAssignments}/{selectedCourse.assignments}
+                </div>
+              </div>
+            </div>
+
+            {/* Lessons */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Lessons</h3>
+              <div className="space-y-3">
+                {selectedCourse.lessons.map((lesson, index) => (
+                  <div key={lesson.id} className="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        lesson.completed ? 'bg-green-600' : 'bg-gray-600'
+                      }`}>
+                        {lesson.completed ? (
+                          <Check className="w-4 h-4 text-white" />
+                        ) : (
+                          <span className="text-white text-sm">{index + 1}</span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-white font-medium">{lesson.title}</div>
+                        <div className="text-gray-400 text-sm">{lesson.duration} • {lesson.type}</div>
+                      </div>
+                    </div>
+                    <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm transition-colors">
+                      {lesson.completed ? 'Review' : 'Start'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Assignments */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Recent Assignments</h3>
+              <div className="space-y-3">
+                {courseAssignments.slice(0, 3).map(assignment => (
+                  <div key={assignment.id} className="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
+                    <div>
+                      <div className="text-white font-medium">{assignment.title}</div>
+                      <div className="text-gray-400 text-sm">Due: {new Date(assignment.dueDate).toLocaleDateString()}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        assignment.status === 'graded' ? 'bg-green-900 text-green-300' :
+                        assignment.submitted ? 'bg-blue-900 text-blue-300' :
+                        'bg-yellow-900 text-yellow-300'
+                      }`}>
+                        {assignment.status === 'graded' ? `Graded: ${assignment.grade}%` :
+                         assignment.submitted ? 'Submitted' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <button 
+                onClick={() => {
+                  setActiveTab('assignments');
+                  setShowCourseModal(false);
+                }}
+                className="bg-blue-600 hover:bg-blue-700 p-4 rounded-lg text-center transition-colors"
+              >
+                <FileText className="w-6 h-6 mx-auto mb-2" />
+                <div className="text-sm font-medium">View Assignments</div>
+              </button>
+              
+              <button 
+                onClick={() => {
+                  setActiveTab('quizzes');
+                  setShowCourseModal(false);
+                }}
+                className="bg-purple-600 hover:bg-purple-700 p-4 rounded-lg text-center transition-colors"
+              >
+                <Brain className="w-6 h-6 mx-auto mb-2" />
+                <div className="text-sm font-medium">Take Quizzes</div>
+              </button>
+              
+              <button 
+                onClick={() => {
+                  setActiveTab('forums');
+                  setShowCourseModal(false);
+                }}
+                className="bg-green-600 hover:bg-green-700 p-4 rounded-lg text-center transition-colors"
+              >
+                <MessageCircle className="w-6 h-6 mx-auto mb-2" />
+                <div className="text-sm font-medium">Join Discussion</div>
+              </button>
+              
+              <button className="bg-yellow-600 hover:bg-yellow-700 p-4 rounded-lg text-center transition-colors">
+                <Download className="w-6 h-6 mx-auto mb-2" />
+                <div className="text-sm font-medium">Download Materials</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Assignment Modal Component
+  const AssignmentModal = () => {
+    if (!showAssignmentModal || !selectedAssignment) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="bg-gray-800 rounded-xl w-full max-w-3xl mx-4 my-4 max-h-[90vh] overflow-hidden">
+          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+            <h2 className="text-xl font-bold text-white">{selectedAssignment.title}</h2>
+            <button
+              onClick={() => setShowAssignmentModal(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-gray-700 rounded-lg p-3">
+                <div className="text-gray-400 text-sm">Due Date</div>
+                <div className="text-white font-medium">{new Date(selectedAssignment.dueDate).toLocaleDateString()}</div>
+              </div>
+              <div className="bg-gray-700 rounded-lg p-3">
+                <div className="text-gray-400 text-sm">Points</div>
+                <div className="text-white font-medium">{selectedAssignment.points}</div>
+              </div>
+              <div className="bg-gray-700 rounded-lg p-3">
+                <div className="text-gray-400 text-sm">Status</div>
+                <div className={`font-medium ${
+                  selectedAssignment.status === 'graded' ? 'text-green-400' :
+                  selectedAssignment.submitted ? 'text-blue-400' : 'text-yellow-400'
+                }`}>
+                  {selectedAssignment.status === 'graded' ? 'Graded' :
+                   selectedAssignment.submitted ? 'Submitted' : 'Pending'}
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-white mb-3">Description</h3>
+              <p className="text-gray-300">{selectedAssignment.description}</p>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-white mb-3">Instructions</h3>
+              <div className="bg-gray-700 rounded-lg p-4">
+                <p className="text-gray-300">{selectedAssignment.instructions}</p>
+              </div>
+            </div>
+
+            {selectedAssignment.attachments && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-3">Attachments</h3>
+                <div className="space-y-2">
+                  {selectedAssignment.attachments.map((file, index) => (
+                    <div key={index} className="bg-gray-700 rounded-lg p-3 flex items-center justify-between">
+                      <span className="text-gray-300">{file}</span>
+                      <button className="text-blue-400 hover:text-blue-300 transition-colors">
+                        <Download className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedAssignment.feedback && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-3">Feedback</h3>
+                <div className="bg-green-900 bg-opacity-30 border border-green-600 rounded-lg p-4">
+                  <div className="text-green-400 font-medium mb-2">Grade: {selectedAssignment.grade}%</div>
+                  <p className="text-green-200">{selectedAssignment.feedback}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-4">
+              {!selectedAssignment.submitted && (
+                <button className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  Submit Assignment
+                </button>
+              )}
+              <button className="bg-gray-600 hover:bg-gray-500 px-6 py-3 rounded-lg font-medium transition-colors">
+                Download Template
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Quiz Modal Component
+  const QuizModal = () => {
+    if (!showQuizModal || !selectedQuiz) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="bg-gray-800 rounded-xl w-full max-w-2xl mx-4 my-4">
+          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+            <h2 className="text-xl font-bold text-white">{selectedQuiz.title}</h2>
+            <button
+              onClick={() => setShowQuizModal(false)}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-6">
+            <p className="text-gray-300 mb-6">{selectedQuiz.description}</p>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-700 rounded-lg p-4">
+                <div className="text-gray-400 text-sm">Questions</div>
+                <div className="text-white text-xl font-bold">{selectedQuiz.questions}</div>
+              </div>
+              <div className="bg-gray-700 rounded-lg p-4">
+                <div className="text-gray-400 text-sm">Time Limit</div>
+                <div className="text-white text-xl font-bold">{selectedQuiz.timeLimit} min</div>
+              </div>
+              <div className="bg-gray-700 rounded-lg p-4">
+                <div className="text-gray-400 text-sm">Attempts Left</div>
+                <div className="text-white text-xl font-bold">{selectedQuiz.attempts}</div>
+              </div>
+              <div className="bg-gray-700 rounded-lg p-4">
+                <div className="text-gray-400 text-sm">Best Score</div>
+                <div className="text-white text-xl font-bold">
+                  {selectedQuiz.bestScore ? `${selectedQuiz.bestScore}%` : 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            {selectedQuiz.bestScore && (
+              <div className="bg-green-900 bg-opacity-30 border border-green-600 rounded-lg p-4 mb-6">
+                <div className="text-green-400 font-medium">Previous Attempt</div>
+                <div className="text-green-200 text-sm">
+                  Last completed: {new Date(selectedQuiz.lastAttempt).toLocaleDateString()}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-4">
+              <button 
+                className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+                disabled={selectedQuiz.attempts === 0}
+              >
+                <Brain className="w-4 h-4" />
+                {selectedQuiz.bestScore ? 'Retake Quiz' : 'Start Quiz'}
+              </button>
+              
+              <button className="bg-gray-600 hover:bg-gray-500 px-6 py-3 rounded-lg font-medium transition-colors">
+                Review Guidelines
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  const LiveSessionCard = ({ session }) => {
+    const hasAccess = sessionAccess[session.id];
+    const statusColor = getSessionStatusColor(session.status);
+    
+    return (
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 hover:border-gray-600 transition-all duration-200">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-1">{session.title}</h3>
+            <p className="text-gray-400 text-sm">by {session.instructor}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+              {session.status.toUpperCase()}
+            </span>
+            {hasAccess ? (
+              <Unlock className="w-4 h-4 text-green-400" />
+            ) : (
+              <Lock className="w-4 h-4 text-red-400" />
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <Calendar className="w-4 h-4" />
+            {formatDate(session.scheduledTime)}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <Clock className="w-4 h-4" />
+            {session.duration} minutes
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <Users className="w-4 h-4" />
+            {session.attendees}/{session.maxAttendees}
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <Record className="w-4 h-4" />
+            {session.recordingEnabled ? 'Recording' : 'No Recording'}
+          </div>
+        </div>
+
+        {/* Token Requirements */}
+        <div className="bg-gray-700 rounded-lg p-3 mb-4">
+          <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Access Requirement</div>
+          {session.tokenRequirement.type === "EITHER" ? (
+            <div className="space-y-1">
+              <div className="text-sm text-white mb-1">Hold EITHER:</div>
+              {session.tokenRequirement.options.map((option, index) => (
+                <div key={index} className="text-sm text-gray-300 pl-2 border-l border-gray-600">
+                  • {option.minAmount} {option.tokenName}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-white">
+              {session.tokenRequirement.minAmount} {session.tokenRequirement.tokenName}
+              {session.tokenRequirement.type === "NFT" ? " (NFT)" : ""}
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {session.status === 'live' && (
+            <button
+              onClick={() => joinLiveSession(session)}
+              disabled={!hasAccess || !walletConnected}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                hasAccess && walletConnected
+                  ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Video className="w-4 h-4" />
+              {hasAccess ? 'Join Live' : 'Access Denied'}
+            </button>
+          )}
+          
+          {session.status === 'scheduled' && (
+            <button
+              disabled={!hasAccess || !walletConnected}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                hasAccess && walletConnected
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              {hasAccess ? 'Scheduled' : 'Access Denied'}
+            </button>
+          )}
+          
+          {session.status === 'ended' && session.recordingUrl && (
+            <button
+              onClick={() => window.open(session.recordingUrl, '_blank')}
+              disabled={!hasAccess || !walletConnected}
+              className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                hasAccess && walletConnected
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Play className="w-4 h-4" />
+              {hasAccess ? 'Watch Recording' : 'Access Denied'}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Live Session Modal (where the actual Daily.co iframe would be embedded)
+  const LiveSessionModal = () => {
+    if (!showLiveModal || !selectedSession) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+        <div className="bg-gray-900 rounded-xl w-full h-full max-w-6xl max-h-5xl mx-4 my-4 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+            <div>
+              <h2 className="text-xl font-bold text-white">{selectedSession.title}</h2>
+              <p className="text-gray-400">with {selectedSession.instructor}</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                LIVE
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-400">
+                <Users className="w-4 h-4" />
+                {selectedSession.attendees} attending
+              </div>
+              {selectedSession.recordingEnabled && (
+                <div className="flex items-center gap-2 text-sm text-red-400">
+                  <Record className="w-4 h-4" />
+                  Recording
+                </div>
+              )}
+              <button
+                onClick={leaveLiveSession}
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+              >
+                Leave Session
+              </button>
+            </div>
+          </div>
+
+          {/* Video Container */}
+          <div className="flex-1 bg-black rounded-b-xl relative">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-400 mb-2">Daily.co Video Stream</p>
+                <p className="text-sm text-gray-500">
+                  In production, this would be a Daily.co iframe with:
+                </p>
+                <div className="text-xs text-gray-500 mt-2 space-y-1">
+                  <div>• Private room URL: {selectedSession.roomUrl}</div>
+                  <div>• Token-gated access for verified users</div>
+                  <div>• Automatic recording to cloud storage</div>
+                  <div>• Real-time chat and screen sharing</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // API Key Configuration Modal
+  const ApiKeyModal = () => {
+    const [tempAppId, setTempAppId] = useState(privyAppId);
+
+    if (!showApiKeyModal) return null;
+
+    const handleSave = () => {
+      if (tempAppId.trim()) {
+        initializePrivy(tempAppId.trim());
+        setShowApiKeyModal(false);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Key className="w-5 h-5" />
+              Configure Privy
+            </h2>
+            <button
+              onClick={() => setShowApiKeyModal(false)}
+              className="text-gray-400 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Privy App ID
+              </label>
+              <input
+                type="text"
+                value={tempAppId}
+                onChange={(e) => setTempAppId(e.target.value)}
+                placeholder="clp_xxxxxxxxxxxxxxxxxx"
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Get your App ID from{' '}
+                <a href="https://dashboard.privy.io" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                  dashboard.privy.io
+                </a>
+              </p>
+            </div>
+
+            {privyError && (
+              <div className="p-3 bg-red-900 border border-red-600 rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400" />
+                <span className="text-red-200 text-sm">{privyError}</span>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleSave}
+                disabled={testingConnection || !tempAppId.trim()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+              >
+                {testingConnection ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Testing...
+                  </>
+                ) : (
+                  'Save & Test'
+                )}
+              </button>
+              <button
+                onClick={() => setShowApiKeyModal(false)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-gray-700 rounded-lg">
+            <div className="text-sm text-gray-300 mb-2">
+              <strong>Privy Free Tier:</strong>
+            </div>
+            <div className="text-xs text-gray-400 space-y-1">
+              <div>• 1,000 monthly active users</div>
+              <div>• All wallet providers included</div>
+              <div>• Social logins available</div>
+              <div>• No credit card required</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const CourseCard = ({ course }) => {
+    const hasAccess = checkTokenAccess(course);
+    
+    return (
+      <div className="bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-700">
+        <div className="relative">
+          <img 
+            src={course.image} 
+            alt={course.title}
+            className="w-full h-48 object-cover"
+          />
+          {course.isLive && (
+            <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              LIVE
+            </div>
+          )}
+          <div className="absolute top-3 right-3">
+            {hasAccess ? (
+              <Unlock className="w-5 h-5 text-green-400" />
+            ) : (
+              <Lock className="w-5 h-5 text-red-400" />
+            )}
+          </div>
+          {course.progress !== undefined && (
+            <div className="absolute bottom-3 left-3 right-3">
+              <div className="bg-black bg-opacity-60 rounded-lg p-2">
+                <div className="flex justify-between text-white text-xs mb-1">
+                  <span>Progress</span>
+                  <span>{course.progress}%</span>
+                </div>
+                <div className="w-full bg-gray-600 rounded-full h-1">
+                  <div 
+                    className="bg-blue-500 h-1 rounded-full transition-all duration-300"
+                    style={{ width: `${course.progress}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="p-6">
+          <h3 className="text-xl font-semibold text-white mb-2">{course.title}</h3>
+          <p className="text-gray-400 mb-4">by {course.instructor}</p>
+          
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm text-gray-500">{course.duration}</span>
+            <div className="flex items-center gap-1 text-sm text-gray-500">
+              <Users className="w-4 h-4" />
+              {course.students}
+            </div>
+          </div>
+
+          {/* Progress Stats */}
+          {course.totalLessons && (
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-gray-700 rounded-lg p-2 text-center">
+                <div className="text-xs text-gray-400">Lessons</div>
+                <div className="text-sm font-medium text-white">{course.completedLessons}/{course.totalLessons}</div>
+              </div>
+              <div className="bg-gray-700 rounded-lg p-2 text-center">
+                <div className="text-xs text-gray-400">Assignments</div>
+                <div className="text-sm font-medium text-white">{course.completedAssignments}/{course.assignments}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-gray-700 rounded-lg p-3 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-400 uppercase tracking-wide">Token Requirement</span>
+              <span className="text-xs px-2 py-1 rounded bg-blue-900 text-blue-300">
+                Ethereum
+              </span>
+            </div>
+            
+            {course.tokenRequirement.type === "EITHER" ? (
+              <div className="space-y-2">
+                <div className="text-sm text-white font-medium mb-2">Hold EITHER:</div>
+                {course.tokenRequirement.options.map((option, index) => (
+                  <div key={index} className="text-sm text-gray-300 pl-2 border-l border-gray-600">
+                    • {option.minAmount} {option.tokenName} {option.type === "NFT" ? "(NFT)" : ""}
+                    {walletConnected && (
+                      <div className="text-xs text-gray-400">
+                        {isLoadingTokens ? (
+                          <div className="flex items-center gap-1">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Loading...
+                          </div>
+                        ) : (
+                          `Your balance: ${
+                            option.type === "NFT" 
+                              ? userTokens['THINK_AGENT_BUNDLE'] || '0'
+                              : parseFloat(userTokens[option.tokenName] || '0').toFixed(2)
+                          }`
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>
+                <div className="text-sm text-white">
+                  {course.tokenRequirement.minAmount} {course.tokenRequirement.tokenName}
+                  {course.tokenRequirement.type === "NFT" ? " (NFT)" : ""}
+                </div>
+                {walletConnected && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    {isLoadingTokens ? (
+                      <div className="flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Loading balance...
+                      </div>
+                    ) : (
+                      `Your balance: ${
+                        course.tokenRequirement.type === "NFT"
+                          ? userTokens['THINK_AGENT_BUNDLE'] || '0'
+                          : parseFloat(userTokens[course.tokenRequirement.tokenName] || '0').toFixed(2)
+                      }`
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button 
+              className={`py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                isLoadingTokens
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : hasAccess 
+                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
+              disabled={!hasAccess || isLoadingTokens}
+              onClick={() => {
+                if (hasAccess) {
+                  setSelectedCourse(course);
+                  setShowCourseModal(true);
+                }
+              }}
+            >
+              {isLoadingTokens ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  {course.isLive ? <Video className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  {hasAccess ? (course.isLive ? 'Join Live' : 'Continue') : 'Access Denied'}
+                </>
+              )}
+            </button>
+            
+            <button 
+              className="py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={!hasAccess}
+              onClick={() => {
+                if (hasAccess) {
+                  setSelectedCourse(course);
+                  setShowCourseModal(true);
+                }
+              }}
+            >
+              <Eye className="w-4 h-4" />
+              Details
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const SidebarItem = ({ icon: Icon, label, tabId, badge }) => (
+    <button
+      onClick={() => setActiveTab(tabId)}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+        activeTab === tabId 
+          ? 'bg-blue-600 text-white' 
+          : 'text-gray-400 hover:text-white hover:bg-gray-700'
+      }`}
+    >
+      <Icon className="w-5 h-5" />
+      <span className="font-medium">{label}</span>
+      {badge && (
+        <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Header */}
+      <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-8 h-8 text-blue-500" />
+              <h1 className="text-2xl font-bold">EduDAO</h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {!walletConnected ? (
+              <button
+                onClick={openAuthModal}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+              >
+                <Wallet className="w-4 h-4" />
+                Sign In
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="text-sm">
+                  <div className="text-gray-400 flex items-center gap-2">
+                    {connectedWalletType && getWalletDisplayName(connectedWalletType)}
+                    {isEmailAuth && <span className="text-green-400">({userEmail})</span>}
+                    {chainId && !isEmailAuth && `• ${getNetworkName(chainId)}`}
+                  </div>
+                  <div className="font-mono text-xs">
+                    {isEmailAuth 
+                      ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                      : `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                    }
+                  </div>
+                </div>
+                <button
+                  onClick={disconnectWallet}
+                  className="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-sm transition-colors duration-200"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="flex">
+        {/* Sidebar */}
+        <aside className="w-64 bg-gray-800 min-h-screen p-6 border-r border-gray-700">
+          <nav className="space-y-2">
+            <SidebarItem icon={Home} label="Dashboard" tabId="dashboard" />
+            <SidebarItem icon={BookOpen} label="My Courses" tabId="courses" />
+            <SidebarItem 
+              icon={Video} 
+              label="Live Sessions" 
+              tabId="live" 
+              badge={liveSessions.filter(s => s.status === 'live').length || null} 
+            />
+            <SidebarItem 
+              icon={FileText} 
+              label="Assignments" 
+              tabId="assignments" 
+              badge={assignments.filter(a => !a.submitted).length || null}
+            />
+            <SidebarItem 
+              icon={Brain} 
+              label="Quizzes" 
+              tabId="quizzes" 
+              badge={quizzes.filter(q => q.status === 'available').length || null}
+            />
+            <SidebarItem 
+              icon={MessageCircle} 
+              label="Forums" 
+              tabId="forums" 
+              badge={forumPosts.filter(p => !p.isResolved).length || null}
+            />
+            <SidebarItem icon={BarChart3} label="Analytics" tabId="analytics" />
+            <SidebarItem icon={Award} label="Certificates" tabId="certificates" />
+            <SidebarItem icon={Bell} label="Notifications" tabId="notifications" badge="5" />
+            <SidebarItem icon={Settings} label="Settings" tabId="settings" />
+          </nav>
+
+          {/* Authentication Status */}
+          <div className="mt-8 p-4 bg-gray-700 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Auth Status</h3>
+              <Check className="w-4 h-4 text-green-400" />
+            </div>
+            
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Wallet Support</span>
+                <span className="text-green-400">Ready</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Email Support</span>
+                <span className="text-green-400">Ready</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Providers</span>
+                <span className="text-green-400">300+ Supported</span>
+              </div>
+            </div>
+
+            <div className="mt-3 p-2 bg-green-900 bg-opacity-50 rounded text-xs text-green-200">
+              ✅ Ready for wallet + email authentication
+            </div>
+          </div>
+
+          {walletConnected && (
+            <div className="mt-4 p-4 bg-gray-700 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Learning Progress</h3>
+                <TrendingUp className="w-4 h-4 text-green-400" />
+              </div>
+              
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Current Streak</span>
+                  <span className="text-green-400 font-bold">{userProgress.currentStreak} days</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Courses Active</span>
+                  <span className="text-blue-400">{userProgress.coursesEnrolled}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Assignments</span>
+                  <span className="text-yellow-400">{assignments.filter(a => !a.submitted).length} pending</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Certificates</span>
+                  <span className="text-purple-400">{userProgress.certificatesEarned} earned</span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-gray-600">
+                <div className="text-xs text-gray-500 mb-2">Quick Actions:</div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setActiveTab('assignments')}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 py-2 px-2 rounded text-xs transition-colors"
+                  >
+                    Assignments
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('quizzes')}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 py-2 px-2 rounded text-xs transition-colors"
+                  >
+                    Quizzes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {walletConnected && (
+            <div className="mt-4 p-4 bg-gray-700 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Token Balances</h3>
+                {isLoadingTokens ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                ) : !isEmailAuth ? (
+                  <button
+                    onClick={() => ethersProvider && queryTokenBalances(walletAddress, ethersProvider).then(setUserTokens)}
+                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    Refresh
+                  </button>
+                ) : (
+                  <span className="text-xs text-green-400">Embedded Wallet</span>
+                )}
+              </div>
+              
+              {isLoadingTokens ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="text-sm text-gray-400">Loading balances...</div>
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">THINK</span>
+                    <span className="text-green-400 font-mono">
+                      {parseFloat(userTokens.THINK || '0').toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Agent Bundle NFT</span>
+                    <span className="text-purple-400 font-mono">{userTokens.THINK_AGENT_BUNDLE || '0'}</span>
+                  </div>
+                </div>
+              )}
+              
+              <div className="mt-4 pt-3 border-t border-gray-600">
+                {isEmailAuth ? (
+                  <div className="space-y-1 text-xs">
+                    <div className="text-gray-400">
+                      <span className="font-semibold">Wallet Type:</span> Embedded (Privy)
+                    </div>
+                    <div className="text-gray-400">
+                      <span className="font-semibold">Email:</span> {userEmail}
+                    </div>
+                    <div className="mt-2 p-2 bg-green-900 bg-opacity-50 rounded text-xs text-green-200">
+                      ✅ Privy-managed embedded wallet
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-xs text-gray-500 mb-2">Contract Info:</div>
+                    <div className="space-y-1 text-xs">
+                      <div className="text-gray-400">
+                        <span className="font-mono">THINK Token</span>
+                      </div>
+                      <div className="text-gray-400">
+                        <span className="font-mono">Agent Bundle NFT</span>
+                      </div>
+                    </div>
+                    
+                    {chainId !== 1 && (
+                      <div className="mt-2 p-2 bg-orange-900 rounded text-xs text-orange-200">
+                        ⚠️ Not on mainnet - balances may not be accurate
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 p-8">
+          {!walletConnected && (
+            <div className="bg-blue-900 border border-blue-600 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-2">
+                <Check className="w-5 h-5 text-blue-400" />
+                <span className="text-blue-200">
+                  Connect with your wallet (MetaMask, Coinbase, WalletConnect + 300 more) or sign in with email.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {walletConnected && isLoadingTokens && (
+            <div className="bg-blue-900 border border-blue-600 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                <span className="text-blue-200">
+                  Querying your THINK token and NFT balances from the blockchain...
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold mb-2">
+              {activeTab === 'live' ? 'Live Sessions' : 'Welcome to EduDAO'}
+            </h2>
+            <p className="text-gray-400">
+              {activeTab === 'live' 
+                ? 'Join live sessions or watch recordings with token-gated access'
+                : 'Decentralized learning platform with multi-wallet authentication & embedded wallets'
+              }
+            </p>
+          </div>
+
+          {/* Content based on active tab */}
+          {activeTab === 'dashboard' && (
+            <div>
+              {/* User Progress Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div className="bg-gray-800 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400">Courses Enrolled</span>
+                    <BookOpen className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div className="text-2xl font-bold text-white">{userProgress.coursesEnrolled}</div>
+                  <div className="text-green-400 text-sm">{userProgress.coursesCompleted} completed</div>
+                </div>
+
+                <div className="bg-gray-800 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400">Study Streak</span>
+                    <TrendingUp className="w-5 h-5 text-green-500" />
+                  </div>
+                  <div className="text-2xl font-bold text-white">{userProgress.currentStreak}</div>
+                  <div className="text-green-400 text-sm">days in a row</div>
+                </div>
+
+                <div className="bg-gray-800 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400">Hours Studied</span>
+                    <Clock className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div className="text-2xl font-bold text-white">{userProgress.totalHoursSpent}</div>
+                  <div className="text-blue-400 text-sm">total hours</div>
+                </div>
+
+                <div className="bg-gray-800 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400">Certificates</span>
+                    <Award className="w-5 h-5 text-yellow-500" />
+                  </div>
+                  <div className="text-2xl font-bold text-white">{userProgress.certificatesEarned}</div>
+                  <div className="text-yellow-400 text-sm">earned</div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <button 
+                  onClick={() => setActiveTab('assignments')}
+                  className="bg-blue-600 hover:bg-blue-700 p-4 rounded-xl text-center transition-colors"
+                >
+                  <FileText className="w-8 h-8 mx-auto mb-2" />
+                  <div className="font-medium">Assignments</div>
+                  <div className="text-sm opacity-75">{assignments.filter(a => !a.submitted).length} pending</div>
+                </button>
+
+                <button 
+                  onClick={() => setActiveTab('quizzes')}
+                  className="bg-purple-600 hover:bg-purple-700 p-4 rounded-xl text-center transition-colors"
+                >
+                  <Brain className="w-8 h-8 mx-auto mb-2" />
+                  <div className="font-medium">Quizzes</div>
+                  <div className="text-sm opacity-75">{quizzes.filter(q => q.status === 'available').length} available</div>
+                </button>
+
+                <button 
+                  onClick={() => setActiveTab('forums')}
+                  className="bg-green-600 hover:bg-green-700 p-4 rounded-xl text-center transition-colors"
+                >
+                  <MessageCircle className="w-8 h-8 mx-auto mb-2" />
+                  <div className="font-medium">Forums</div>
+                  <div className="text-sm opacity-75">{forumPosts.length} discussions</div>
+                </button>
+
+                <button 
+                  onClick={() => setActiveTab('live')}
+                  className="bg-red-600 hover:bg-red-700 p-4 rounded-xl text-center transition-colors"
+                >
+                  <Video className="w-8 h-8 mx-auto mb-2" />
+                  <div className="font-medium">Live Sessions</div>
+                  <div className="text-sm opacity-75">{liveSessions.filter(s => s.status === 'live').length} live now</div>
+                </button>
+              </div>
+
+              {/* Current Courses */}
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold text-white mb-4">Continue Learning</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {mockCourses.map(course => (
+                    <CourseCard key={course.id} course={course} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'courses' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {mockCourses.map(course => (
+                <CourseCard key={course.id} course={course} />
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'assignments' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">Assignments</h2>
+                <div className="flex gap-2">
+                  <button className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                    Filter
+                  </button>
+                  <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
+                    <PlusCircle className="w-4 h-4" />
+                    New Assignment
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {assignments.map(assignment => (
+                  <div key={assignment.id} className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-white">{assignment.title}</h3>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        assignment.status === 'graded' ? 'bg-green-900 text-green-300' :
+                        assignment.submitted ? 'bg-blue-900 text-blue-300' :
+                        'bg-yellow-900 text-yellow-300'
+                      }`}>
+                        {assignment.status === 'graded' ? 'Graded' :
+                         assignment.submitted ? 'Submitted' : 'Pending'}
+                      </span>
+                    </div>
+                    
+                    <p className="text-gray-400 text-sm mb-4">{assignment.description}</p>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Due Date</span>
+                        <span className="text-white">{new Date(assignment.dueDate).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Points</span>
+                        <span className="text-white">{assignment.points}</span>
+                      </div>
+                      {assignment.grade && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-400">Grade</span>
+                          <span className="text-green-400">{assignment.grade}%</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        setSelectedAssignment(assignment);
+                        setShowAssignmentModal(true);
+                      }}
+                      className="w-full bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded-lg font-medium transition-colors"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'quizzes' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">Quizzes</h2>
+                <button className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                  Filter by Course
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {quizzes.map(quiz => (
+                  <div key={quiz.id} className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-white">{quiz.title}</h3>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        quiz.status === 'completed' ? 'bg-green-900 text-green-300' :
+                        'bg-blue-900 text-blue-300'
+                      }`}>
+                        {quiz.status === 'completed' ? 'Completed' : 'Available'}
+                      </span>
+                    </div>
+                    
+                    <p className="text-gray-400 text-sm mb-4">{quiz.description}</p>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="bg-gray-700 rounded-lg p-3 text-center">
+                        <div className="text-white font-bold">{quiz.questions}</div>
+                        <div className="text-gray-400 text-xs">Questions</div>
+                      </div>
+                      <div className="bg-gray-700 rounded-lg p-3 text-center">
+                        <div className="text-white font-bold">{quiz.timeLimit}</div>
+                        <div className="text-gray-400 text-xs">Minutes</div>
+                      </div>
+                    </div>
+
+                    {quiz.bestScore && (
+                      <div className="mb-4">
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-400">Best Score</span>
+                          <span className="text-green-400">{quiz.bestScore}%</span>
+                        </div>
+                        <div className="w-full bg-gray-700 rounded-full h-2">
+                          <div 
+                            className="bg-green-500 h-2 rounded-full"
+                            style={{ width: `${quiz.bestScore}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
+
+                    <button 
+                      onClick={() => {
+                        setSelectedQuiz(quiz);
+                        setShowQuizModal(true);
+                      }}
+                      className="w-full bg-purple-600 hover:bg-purple-700 py-2 px-4 rounded-lg font-medium transition-colors"
+                    >
+                      {quiz.bestScore ? 'Retake Quiz' : 'Start Quiz'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'forums' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">Course Forums</h2>
+                <button 
+                  onClick={() => setShowForumModal(true)}
+                  className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  New Discussion
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {forumPosts.map(post => (
+                  <div key={post.id} className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">{post.title}</h3>
+                        <div className="text-gray-400 text-sm">
+                          by {post.authorName} • {new Date(post.lastReply).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        post.category === 'Technical Help' ? 'bg-red-900 text-red-300' :
+                        post.category === 'Assignment Help' ? 'bg-yellow-900 text-yellow-300' :
+                        'bg-blue-900 text-blue-300'
+                      }`}>
+                        {post.category}
+                      </span>
+                    </div>
+                    
+                    <p className="text-gray-300 mb-4">{post.content}</p>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                        <span className="flex items-center gap-1">
+                          <MessageCircle className="w-4 h-4" />
+                          {post.replies} replies
+                        </span>
+                        <span>Last reply: {new Date(post.lastReply).toLocaleDateString()}</span>
+                      </div>
+                      <button className="text-blue-400 hover:text-blue-300 text-sm transition-colors">
+                        Join Discussion
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'live' && (
+            <div>
+              {/* Live Session Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-red-900 bg-opacity-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-red-300 font-medium">Live Now</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {liveSessions.filter(s => s.status === 'live').length}
+                  </div>
+                </div>
+                
+                <div className="bg-blue-900 bg-opacity-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="w-4 h-4 text-blue-400" />
+                    <span className="text-blue-300 font-medium">Scheduled</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {liveSessions.filter(s => s.status === 'scheduled').length}
+                  </div>
+                </div>
+                
+                <div className="bg-green-900 bg-opacity-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Play className="w-4 h-4 text-green-400" />
+                    <span className="text-green-300 font-medium">Recordings</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">
+                    {liveSessions.filter(s => s.status === 'ended' && s.recordingUrl).length}
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Sessions List */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {liveSessions.map(session => (
+                  <LiveSessionCard key={session.id} session={session} />
+                ))}
+              </div>
+              
+              {!walletConnected && (
+                <div className="mt-6 bg-yellow-900 border border-yellow-600 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="w-5 h-5 text-yellow-400" />
+                    <span className="text-yellow-200">
+                      Sign in with your wallet or email to join live sessions and access recordings
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'notifications' && (
+            <div className="bg-gray-800 rounded-xl p-8 text-center">
+              <Bell className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">Notifications</h3>
+              <p className="text-gray-400">Stay updated with course announcements and live sessions!</p>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="bg-gray-800 rounded-xl p-8 text-center">
+              <Settings className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">Settings</h3>
+              <p className="text-gray-400">Customize your learning experience and preferences!</p>
+            </div>
+          )}
+
+          {walletConnected && (
+            <div className="mt-8 bg-gray-800 rounded-xl p-6">
+              <h3 className="text-xl font-semibold mb-4">Recent Activity</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Completed "DeFi Basics" lesson</span>
+                  <span className="ml-auto text-sm text-gray-400">2 hours ago</span>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span>Joined live session: "NFT Marketplace Analysis"</span>
+                  <span className="ml-auto text-sm text-gray-400">1 day ago</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Authentication Modal */}
+      <AuthModal />
+
+      {/* Course Detail Modal */}
+      <CourseDetailModal />
+
+      {/* Assignment Modal */}
+      <AssignmentModal />
+
+      {/* Quiz Modal */}
+      <QuizModal />
+
+      {/* Forum Modal */}
+      <ForumModal />
+
+      {/* Live Session Modal */}
+      <LiveSessionModal />
+
+      {/* Development Info Modal - Only shown if needed for debugging */}
+      {showApiKeyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 border border-gray-700">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Privy Configuration</h2>
+              <button
+                onClick={() => setShowApiKeyModal(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-green-900 bg-opacity-50 rounded-lg">
+                <div className="text-sm text-green-200 mb-2">
+                  ✅ <strong>App ID Configured</strong>
+                </div>
+                <div className="text-xs text-green-300 font-mono break-all">
+                  {privyAppId}
+                </div>
+              </div>
+
+              <div className="p-4 bg-gray-700 rounded-lg">
+                <div className="text-sm text-gray-300 mb-2">
+                  <strong>Features Enabled:</strong>
+                </div>
+                <div className="text-xs text-gray-400 space-y-1">
+                  <div>• 300+ wallet providers</div>
+                  <div>• Social logins (email, Google, Apple)</div>
+                  <div>• Hardware wallet support</div>
+                  <div>• Mobile wallet connections</div>
+                  <div>• WalletConnect integration</div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowApiKeyModal(false)}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors duration-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Session Modal */}
+      <LiveSessionModal />
+    </div>
+  );
+};
+
+export default LearningDashboard;
