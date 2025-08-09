@@ -275,21 +275,157 @@ export default function Dashboard() {
           </div>
         );
 
+      case 'instructor':
+        if (!userData?.isInstructor) return null;
+        
+        return (
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-slate-900">Instructor Dashboard</h2>
+              <button 
+                onClick={() => setShowCreateCourse(true)}
+                className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                data-testid="button-create-course-instructor"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>Create Course</span>
+              </button>
+            </div>
+
+            {/* Instructor Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-600 text-sm">My Courses</p>
+                    <p className="text-2xl font-bold text-slate-900">{typedCourses.filter((c: any) => c.instructor?.includes(userData?.displayName || 'Instructor')).length}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-emerald-50 text-emerald-500">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-600 text-sm">Total Students</p>
+                    <p className="text-2xl font-bold text-slate-900">{typedEnrollments.length}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary-50 text-primary-500">
+                    <Users className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-600 text-sm">Live Sessions</p>
+                    <p className="text-2xl font-bold text-slate-900">{typedLiveSessions.length}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-50 text-purple-500">
+                    <Video className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-600 text-sm">Completion Rate</p>
+                    <p className="text-2xl font-bold text-slate-900">87%</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-cyan-50 text-cyan-500">
+                    <TrendingUp className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* My Courses Management */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">My Courses</h3>
+              <div className="space-y-4">
+                {typedCourses.map((course: any) => (
+                  <div key={course.id} className="border border-slate-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-slate-900">{course.title}</h4>
+                        <p className="text-sm text-slate-600">{course.description}</p>
+                        <p className="text-sm text-slate-500 mt-1">Duration: {course.duration}</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button className="text-emerald-600 hover:text-emerald-700 px-3 py-1 text-sm border border-emerald-300 rounded">
+                          Edit Course
+                        </button>
+                        <button className="text-primary-600 hover:text-primary-700 px-3 py-1 text-sm border border-primary-300 rounded">
+                          View Students
+                        </button>
+                        <button className="text-purple-600 hover:text-purple-700 px-3 py-1 text-sm border border-purple-300 rounded">
+                          Schedule Session
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {typedCourses.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-slate-500">No courses created yet</p>
+                    <button 
+                      onClick={() => setShowCreateCourse(true)}
+                      className="mt-4 text-emerald-600 hover:text-emerald-700 text-sm"
+                    >
+                      Create your first course
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Learning Progress (Instructor as Learner) */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">My Learning Journey</h3>
+              <p className="text-slate-600 text-sm mb-4">As an instructor, continue learning from other courses</p>
+              <div className="space-y-4">
+                {typedEnrollments.slice(0, 3).map((enrollment: any) => (
+                  <CourseCard 
+                    key={enrollment.id} 
+                    course={enrollment.course} 
+                    enrollment={enrollment}
+                    compact={true}
+                  />
+                ))}
+                {typedEnrollments.length === 0 && (
+                  <p className="text-slate-500 text-center py-4">No enrolled courses as a learner</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
       case 'admin':
-        if (!user?.isAdmin) return null;
+        if (!userData?.isAdmin) return null;
         
         return (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-slate-900">Admin Dashboard</h2>
-              <button 
-                onClick={() => setShowCreateCourse(true)}
-                className="flex items-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                data-testid="button-create-course"
-              >
-                <BookOpen className="w-4 h-4" />
-                <span>Create Course</span>
-              </button>
+              <div className="flex items-center space-x-3">
+                <button 
+                  onClick={() => setShowCreateCourse(true)}
+                  className="flex items-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  data-testid="button-create-course"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Create Course</span>
+                </button>
+                <button className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                  <Users className="w-4 h-4" />
+                  <span>Manage Users</span>
+                </button>
+                <button className="flex items-center space-x-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                  <Settings className="w-4 h-4" />
+                  <span>System Settings</span>
+                </button>
+              </div>
             </div>
 
             {/* Admin Stats */}
@@ -359,8 +495,10 @@ export default function Dashboard() {
                         </td>
                         <td className="py-4">
                           <div className="flex items-center space-x-2">
-                            <button className="text-cyan-500 hover:text-cyan-600 text-sm">Edit</button>
-                            <button className="text-slate-500 hover:text-slate-600 text-sm">Analytics</button>
+                            <button className="text-cyan-500 hover:text-cyan-600 text-sm border border-cyan-300 px-2 py-1 rounded">Edit</button>
+                            <button className="text-slate-500 hover:text-slate-600 text-sm border border-slate-300 px-2 py-1 rounded">Analytics</button>
+                            <button className="text-emerald-500 hover:text-emerald-600 text-sm border border-emerald-300 px-2 py-1 rounded">Students</button>
+                            <button className="text-red-500 hover:text-red-600 text-sm border border-red-300 px-2 py-1 rounded">Archive</button>
                           </div>
                         </td>
                       </tr>
@@ -429,7 +567,7 @@ export default function Dashboard() {
               </p>
               <div className="bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg p-4 mb-8">
                 <p className="text-sm text-cyan-700 dark:text-cyan-300">
-                  <strong>Testing Admin/Instructor Features:</strong> Connect a wallet ending in "000" for admin access or "111" for instructor access to test course creation and management features.
+                  <strong>Testing Admin/Instructor Features:</strong> Admin and instructor permissions are now controlled via Supabase database flags. Use the API endpoints to set permissions for any wallet address.
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">

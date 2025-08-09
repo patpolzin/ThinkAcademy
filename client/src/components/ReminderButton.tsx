@@ -27,8 +27,12 @@ export default function ReminderButton({ session, compact = false }: ReminderBut
 
   const createReminderMutation = useMutation({
     mutationFn: async (reminderTime: string) => {
+      // First get the user's database ID from their wallet address
+      const userResponse = await apiRequest(`/api/users/${address}`, 'GET');
+      const userData = await userResponse.json();
+      
       return apiRequest('/api/reminders', 'POST', {
-        userId: address,
+        userId: userData.id, // Use database ID, not wallet address
         sessionId: session.id,
         reminderTime: new Date(reminderTime).toISOString()
       });
