@@ -57,8 +57,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           onClose();
         }
       } else {
-        console.log('Privy is not properly configured. Please check your App ID and allowed origins.');
-        alert('Email authentication requires Privy configuration:\n\n1. Go to dashboard.privy.io\n2. Select your app\n3. Go to Settings > Domains\n4. Add your Replit domain: 6ac68285-ddeb-45de-b1c5-523386a5591c-00-t7jltvvxcs2h.spock.replit.dev\n\nThis will fix the cross-origin frame error.');
+        console.log('Privy authentication requires CSP header configuration on Replit.');
+        alert('Email authentication with Privy requires additional setup.\n\nContact Replit support to modify Content Security Policy (CSP) headers to allow framing from auth.privy.io.\n\nFor now, please use MetaMask wallet connection.');
       }
     } catch (error) {
       console.error('Privy authentication failed:', error);

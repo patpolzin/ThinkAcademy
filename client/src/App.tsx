@@ -38,41 +38,13 @@ function App() {
     </QueryClientProvider>
   );
 
-  // Temporarily disable Privy until domain configuration is complete
-  // To enable Privy authentication, you need to:
-  // 1. Go to dashboard.privy.io 
-  // 2. Select your app with ID: cme35jx9100i6ky0bxiecsetb
-  // 3. Go to Settings > Allowed origins
-  // 4. Add: https://6ac68285-ddeb-45de-b1c5-523386a5591c-00-t7jltvvxcs2h.spock.replit.dev
-  // 5. Save the configuration
-  // 6. Then uncomment the PrivyProvider code below
+  // MetaMask authentication is fully functional
+  // Privy email authentication requires additional Replit configuration
+  // For Privy to work on Replit, contact Replit support to adjust CSP headers
+  // that allow framing from auth.privy.io
   
-  console.log('Privy is disabled until domain configuration is complete');
-  console.log('Your domain to add to Privy: https://6ac68285-ddeb-45de-b1c5-523386a5591c-00-t7jltvvxcs2h.spock.replit.dev');
-  
+  console.log('Running with MetaMask authentication - Privy requires CSP header changes');
   return AppContent;
-
-  /*
-  if (PRIVY_APP_ID && PRIVY_APP_ID !== 'your-privy-app-id') {
-    return (
-      <PrivyProvider
-        appId={PRIVY_APP_ID}
-        config={{
-          appearance: {
-            theme: 'dark',
-            accentColor: '#06b6d4',
-          },
-          embeddedWallets: {
-            createOnLogin: 'users-without-wallets',
-          },
-        }}
-      >
-        {AppContent}
-      </PrivyProvider>
-    );
-  }
-  return AppContent;
-  */
 }
 
 export default App;

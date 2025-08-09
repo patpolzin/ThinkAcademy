@@ -7,7 +7,7 @@ EduDAO is a token-gated learning platform that combines blockchain technology wi
 Preferred communication style: Simple, everyday language.
 Platform branding: UTHINK with "U" highlighted in cyan color to represent university concept.
 Color scheme: Cyan/teal primary colors with dark mode as default.
-Authentication: Dual login system - MetaMask wallet connection and Privy email+assigned wallet.
+Authentication: MetaMask wallet connection (fully functional) and Privy email+assigned wallet (requires Replit CSP configuration).
 UI: Single "Login" button that opens modal with both authentication options.
 
 # System Architecture
