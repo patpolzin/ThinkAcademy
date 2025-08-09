@@ -67,8 +67,13 @@ interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getUser(walletAddress: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.walletAddress, walletAddress.toLowerCase()));
-    return user || undefined;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.walletAddress, walletAddress.toLowerCase()));
+      return user || undefined;
+    } catch (error) {
+      console.error('Database error getting user:', error);
+      return undefined;
+    }
   }
 
   async getUserById(id: string): Promise<User | undefined> {

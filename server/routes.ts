@@ -109,20 +109,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.post("/api/admin/make-admin/:id", async (req, res) => {
+  app.post("/api/admin/make-admin/:walletAddress", async (req, res) => {
     try {
-      const user = await storage.makeUserAdmin(req.params.id);
+      // First get or create the user
+      let user = await storage.getUser(req.params.walletAddress);
+      if (!user) {
+        user = await storage.createUser({
+          walletAddress: req.params.walletAddress.toLowerCase(),
+          displayName: `User ${req.params.walletAddress.slice(-6)}`,
+          isAdmin: true
+        });
+      } else {
+        user = await storage.makeUserAdmin(user.id);
+      }
       res.json(user);
     } catch (error) {
+      console.error("Make admin error:", error);
       res.status(500).json({ error: "Failed to make user admin" });
     }
   });
 
-  app.post("/api/admin/make-instructor/:id", async (req, res) => {
+  app.post("/api/admin/make-instructor/:walletAddress", async (req, res) => {
     try {
-      const user = await storage.makeUserInstructor(req.params.id);
+      // First get or create the user
+      let user = await storage.getUser(req.params.walletAddress);
+      if (!user) {
+        user = await storage.createUser({
+          walletAddress: req.params.walletAddress.toLowerCase(),
+          displayName: `Instructor ${req.params.walletAddress.slice(-6)}`,
+          isInstructor: true
+        });
+      } else {
+        user = await storage.makeUserInstructor(user.id);
+      }
       res.json(user);
     } catch (error) {
+      console.error("Make instructor error:", error);
       res.status(500).json({ error: "Failed to make user instructor" });
     }
   });

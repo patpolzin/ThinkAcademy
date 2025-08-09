@@ -34,7 +34,7 @@ export default function Dashboard() {
     enabled: isConnected && !!address,
   });
 
-  // Get user data - would be from actual API in real app
+  // Get user data from Supabase with proper permissions
   const { data: userData } = useQuery({
     queryKey: ['/api/users', address],
     enabled: isConnected && !!address,
@@ -45,8 +45,8 @@ export default function Dashboard() {
     displayName: '',
     profilePicture: '',
     bio: '',
-    isAdmin: address ? address.toLowerCase().endsWith('000') : false, // Simple admin check
-    isInstructor: address ? address.toLowerCase().endsWith('111') : false, // Simple instructor check
+    isAdmin: false,
+    isInstructor: false,
     tokenBalances: tokenBalances || {}
   };
 
@@ -57,15 +57,15 @@ export default function Dashboard() {
 
   const { data: analytics } = useQuery({
     queryKey: ['/api/analytics'],
-    enabled: isConnected && user?.isAdmin,
+    enabled: isConnected && userData?.isAdmin,
   });
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'live', label: 'Live Sessions', icon: Video },
-    ...(user?.isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
-    ...(user?.isInstructor ? [{ id: 'instructor', label: 'Instructor', icon: Users }] : []),
+    ...(userData?.isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
+    ...(userData?.isInstructor ? [{ id: 'instructor', label: 'Instructor', icon: Users }] : []),
   ];
 
   const stats = [
