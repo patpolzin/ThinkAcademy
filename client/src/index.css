@@ -72,6 +72,38 @@
 
 @layer components {
   .nav-tab.active {
-    @apply text-primary bg-primary/10;
+    @apply text-black bg-primary/10;
+  }
+  
+  /* Force black text on all elements for better readability */
+  .text-black-override * {
+    @apply text-black !important;
+  }
+  
+  /* Course card text fixes */
+  .course-card h3,
+  .course-card p,
+  .course-card span,
+  .course-card div {
+    @apply text-black;
+  }
+  
+  /* Tab content text fixes */
+  .tab-content,
+  .tab-content p,
+  .tab-content h1,
+  .tab-content h2,
+  .tab-content h3,
+  .tab-content h4,
+  .tab-content span,
+  .tab-content div {
+    @apply text-black;
+  }
+  
+  /* Button and link text fixes */
+  button,
+  .btn,
+  a:not(.text-gradient) {
+    @apply text-black;
   }
 }

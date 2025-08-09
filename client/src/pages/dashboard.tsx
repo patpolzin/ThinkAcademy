@@ -152,8 +152,8 @@ export default function Dashboard() {
                 <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-slate-600 text-sm">{stat.title}</p>
-                      <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                      <p className="text-black text-sm">{stat.title}</p>
+                      <p className="text-2xl font-bold text-black">{stat.value}</p>
                     </div>
                     <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color}`}>
                       {typeof stat.icon === 'function' ? 
@@ -170,7 +170,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Continue Learning */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Continue Learning</h3>
+                <h3 className="text-lg font-semibold text-black mb-4">Continue Learning</h3>
                 <div className="space-y-4">
                   {typedEnrollments.slice(0, 2).map((enrollment: any) => (
                     <CourseCard 
@@ -181,14 +181,14 @@ export default function Dashboard() {
                     />
                   ))}
                   {typedEnrollments.length === 0 && (
-                    <p className="text-slate-500 text-center py-8">No enrolled courses yet</p>
+                    <p className="text-black text-center py-8">No enrolled courses yet</p>
                   )}
                 </div>
               </div>
 
               {/* Upcoming Sessions */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Upcoming Live Sessions</h3>
+                <h3 className="text-lg font-semibold text-black mb-4">Upcoming Live Sessions</h3>
                 <div className="space-y-4">
                   {typedLiveSessions.slice(0, 2).map((session: any) => (
                     <LiveSessionCard 
@@ -210,7 +210,7 @@ export default function Dashboard() {
         return (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">All Courses</h2>
+              <h2 className="text-2xl font-bold text-black">All Courses</h2>
               <div className="flex items-center space-x-4">
                 <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
                   <option>All Categories</option>
