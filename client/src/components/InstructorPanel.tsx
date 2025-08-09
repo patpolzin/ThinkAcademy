@@ -1,0 +1,446 @@
+import { useState } from "react";
+import { BookOpen, Users, BarChart3, Settings, Plus, Edit, Trash2, Video, FileText, Award } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+interface InstructorPanelProps {
+  user: any;
+}
+
+export default function InstructorPanel({ user }: InstructorPanelProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [activeInstructorTab, setActiveInstructorTab] = useState('overview');
+  const [showCreateCourse, setShowCreateCourse] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
+
+  // Fetch instructor's courses only
+  const { data: instructorCourses = [] } = useQuery({
+    queryKey: ['/api/instructor/courses', user?.walletAddress],
+    enabled: user?.isInstructor && !!user?.walletAddress
+  });
+
+  // Fetch instructor analytics
+  const { data: instructorStats } = useQuery({
+    queryKey: ['/api/instructor/analytics', user?.walletAddress],
+    enabled: user?.isInstructor && !!user?.walletAddress
+  });
+
+  // Create course mutation
+  const createCourseMutation = useMutation({
+    mutationFn: async (courseData: any) => {
+      return apiRequest('/api/courses', 'POST', {
+        ...courseData,
+        instructor: user?.displayName || user?.walletAddress,
+        instructorWallet: user?.walletAddress,
+        createdBy: user?.walletAddress
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Course created successfully!" });
+      queryClient.invalidateQueries({ queryKey: ['/api/instructor/courses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+      setShowCreateCourse(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create course", variant: "destructive" });
+    }
+  });
+
+  // Update course mutation
+  const updateCourseMutation = useMutation({
+    mutationFn: async ({ courseId, updates }: { courseId: string; updates: any }) => {
+      return apiRequest(`/api/courses/${courseId}`, 'PUT', updates);
+    },
+    onSuccess: () => {
+      toast({ title: "Course updated successfully!" });
+      queryClient.invalidateQueries({ queryKey: ['/api/instructor/courses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+      setEditingCourse(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update course", variant: "destructive" });
+    }
+  });
+
+  // Delete course mutation
+  const deleteCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      return apiRequest(`/api/courses/${courseId}`, 'DELETE');
+    },
+    onSuccess: () => {
+      toast({ title: "Course deleted successfully!" });
+      queryClient.invalidateQueries({ queryKey: ['/api/instructor/courses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete course", variant: "destructive" });
+    }
+  });
+
+  const instructorTabs = [
+    { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'courses', label: 'My Courses', icon: BookOpen },
+    { id: 'students', label: 'Students', icon: Users },
+    { id: 'analytics', label: 'Performance', icon: BarChart3 },
+    { id: 'settings', label: 'Settings', icon: Settings }
+  ];
+
+  const renderInstructorTabContent = () => {
+    switch (activeInstructorTab) {
+      case 'overview':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-slate-900">Instructor Dashboard</h3>
+              <button
+                onClick={() => setShowCreateCourse(true)}
+                className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
+                data-testid="button-create-course-instructor"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Course</span>
+              </button>
+            </div>
+            
+            {/* Instructor Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-600 text-sm">My Courses</p>
+                    <p className="text-2xl font-bold text-slate-900">{instructorCourses.length}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-primary-50 text-primary-500">
+                    <BookOpen className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-600 text-sm">Total Students</p>
+                    <p className="text-2xl font-bold text-slate-900">{instructorStats?.totalStudents || 0}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-emerald-50 text-emerald-500">
+                    <Users className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-600 text-sm">Avg Completion</p>
+                    <p className="text-2xl font-bold text-slate-900">{instructorStats?.avgCompletion || 0}%</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-50 text-purple-500">
+                    <Award className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-600 text-sm">Total Revenue</p>
+                    <p className="text-2xl font-bold text-slate-900">-</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-cyan-50 text-cyan-500">
+                    <BarChart3 className="w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h4 className="text-lg font-semibold text-slate-900 mb-4">Recent Activity</h4>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded">
+                  <Users className="w-5 h-5 text-slate-600" />
+                  <span className="text-sm text-slate-700">New student enrolled in your course</span>
+                  <span className="text-xs text-slate-500 ml-auto">2 hours ago</span>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded">
+                  <Award className="w-5 h-5 text-slate-600" />
+                  <span className="text-sm text-slate-700">Student completed course assessment</span>
+                  <span className="text-xs text-slate-500 ml-auto">4 hours ago</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'courses':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-slate-900">My Courses</h3>
+              <button
+                onClick={() => setShowCreateCourse(true)}
+                className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Course</span>
+              </button>
+            </div>
+            
+            {/* Course Management Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Course</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Students</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Progress</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {instructorCourses.map((course: any) => (
+                      <tr key={course.id} className="border-b border-slate-100">
+                        <td className="py-4 px-4">
+                          <div>
+                            <p className="font-medium text-slate-900">{course.title}</p>
+                            <p className="text-sm text-slate-600">{course.description?.slice(0, 60)}...</p>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-slate-900">{course.enrolledCount || 0}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="w-full bg-slate-200 rounded-full h-2">
+                            <div 
+                              className="bg-primary-600 h-2 rounded-full"
+                              style={{ width: `${course.avgProgress || 0}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs text-slate-600 mt-1">{course.avgProgress || 0}% avg</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${
+                            course.isActive 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {course.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center space-x-2">
+                            <button 
+                              onClick={() => setEditingCourse(course)}
+                              className="text-primary-600 hover:text-primary-700 text-sm border border-primary-300 px-2 py-1 rounded"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete this course?')) {
+                                  deleteCourseMutation.mutate(course.id);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700 text-sm border border-red-300 px-2 py-1 rounded"
+                              disabled={deleteCourseMutation.isPending}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                            <button className="text-emerald-600 hover:text-emerald-700 text-sm border border-emerald-300 px-2 py-1 rounded">
+                              <Video className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'students':
+        return (
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold text-slate-900">Student Management</h3>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <p className="text-slate-600">Student progress tracking and communication features coming soon...</p>
+            </div>
+          </div>
+        );
+
+      case 'analytics':
+        return (
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold text-slate-900">Performance Analytics</h3>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <p className="text-slate-600">Detailed analytics and reporting features coming soon...</p>
+            </div>
+          </div>
+        );
+
+      case 'settings':
+        return (
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold text-slate-900">Instructor Settings</h3>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <p className="text-slate-600">Instructor preferences and configuration options coming soon...</p>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  if (!user?.isInstructor) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Instructor Navigation */}
+      <div className="border-b border-slate-200">
+        <nav className="flex space-x-8">
+          {instructorTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveInstructorTab(tab.id)}
+              className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeInstructorTab === tab.id
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+              }`}
+            >
+              <tab.icon className="w-5 h-5" />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Instructor Content */}
+      {renderInstructorTabContent()}
+
+      {/* Create Course Modal */}
+      {showCreateCourse && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Create New Course</h3>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              createCourseMutation.mutate({
+                title: formData.get('title'),
+                description: formData.get('description'),
+                category: formData.get('category'),
+                difficulty: formData.get('difficulty'),
+                duration: formData.get('duration'),
+                tokenRequirement: {
+                  type: formData.get('tokenType'),
+                  minAmount: formData.get('tokenAmount') || 0,
+                  tokenName: 'THINK'
+                },
+                isActive: true
+              });
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Course Title</label>
+                  <input
+                    name="title"
+                    type="text"
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Enter course title"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    required
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Course description"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                    <select
+                      name="category"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="Programming">Programming</option>
+                      <option value="Design">Design</option>
+                      <option value="Business">Business</option>
+                      <option value="Marketing">Marketing</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Difficulty</label>
+                    <select
+                      name="difficulty"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Token Requirement</label>
+                    <select
+                      name="tokenType"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="NONE">Free Access</option>
+                      <option value="ERC20">THINK Tokens</option>
+                      <option value="NFT">THINK NFT</option>
+                      <option value="EITHER">Either Token</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Minimum Amount</label>
+                    <input
+                      name="tokenAmount"
+                      type="number"
+                      min="0"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex space-x-3 mt-6">
+                <button
+                  type="submit"
+                  disabled={createCourseMutation.isPending}
+                  className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {createCourseMutation.isPending ? 'Creating...' : 'Create Course'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateCourse(false)}
+                  className="text-slate-600 border border-slate-300 px-4 py-2 rounded-lg hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

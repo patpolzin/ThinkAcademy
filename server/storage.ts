@@ -179,6 +179,43 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users);
   }
 
+  async getCoursesByInstructor(walletAddress: string): Promise<Course[]> {
+    return await db.select().from(courses).where(eq(courses.instructorWallet, walletAddress));
+  }
+
+  async getInstructorAnalytics(walletAddress: string): Promise<{
+    totalStudents: number;
+    avgCompletion: number;
+    totalRevenue: number;
+    activeCourses: number;
+  }> {
+    try {
+      const instructorCourses = await this.getCoursesByInstructor(walletAddress);
+      const courseIds = instructorCourses.map(c => c.id);
+      
+      if (courseIds.length === 0) {
+        return { totalStudents: 0, avgCompletion: 0, totalRevenue: 0, activeCourses: 0 };
+      }
+      
+      const courseEnrollments = await db.select().from(enrollments)
+        .where(courseIds.length > 0 ? sql`${enrollments.courseId} IN (${sql.join(courseIds.map(id => sql`${id}`), sql`, `)})` : sql`1=0`);
+      
+      const totalStudents = new Set(courseEnrollments.map(e => e.userId)).size;
+      const avgCompletion = courseEnrollments.length > 0 ? 
+        courseEnrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / courseEnrollments.length : 0;
+      
+      return {
+        totalStudents,
+        avgCompletion: Math.round(avgCompletion),
+        totalRevenue: 0, // To be implemented with payment system
+        activeCourses: instructorCourses.filter(c => c.isActive).length
+      };
+    } catch (error) {
+      console.error("Instructor analytics error:", error);
+      return { totalStudents: 0, avgCompletion: 0, totalRevenue: 0, activeCourses: 0 };
+    }
+  }
+
   async createUser(userData: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)

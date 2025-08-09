@@ -108,6 +108,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Instructor-specific routes
+  app.get("/api/instructor/courses/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      const instructorCourses = await storage.getCoursesByInstructor(walletAddress.toLowerCase());
+      res.json(instructorCourses);
+    } catch (error) {
+      console.error("Instructor courses fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch instructor courses" });
+    }
+  });
+
+  app.get("/api/instructor/analytics/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      const analytics = await storage.getInstructorAnalytics(walletAddress.toLowerCase());
+      res.json(analytics);
+    } catch (error) {
+      console.error("Instructor analytics fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch instructor analytics" });
+    }
+  });
+
   // Admin routes for user management
   app.get("/api/admin/users", async (req, res) => {
     try {
