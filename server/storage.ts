@@ -1,25 +1,33 @@
 import { users, courses, enrollments, liveSessions, assignments, forums, type User, type Course, type Enrollment, type LiveSession, type Assignment, type Forum, type InsertUser, type InsertCourse, type InsertEnrollment, type InsertLiveSession, type InsertAssignment, type InsertForum } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 interface IStorage {
   // Users
   getUser(walletAddress: string): Promise<User | undefined>;
   getUserById(id: string): Promise<User | undefined>;
+  getUserByWallet(walletAddress: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(userData: InsertUser): Promise<User>;
+  updateUserTokens(id: string, tokens: Record<string, string>): Promise<User>;
   
   // Courses
   getCourses(): Promise<Course[]>;
   getCourse(id: string): Promise<Course | undefined>;
   createCourse(courseData: InsertCourse): Promise<Course>;
+  updateCourse(id: string, updates: Partial<InsertCourse>): Promise<Course>;
+  deleteCourse(id: string): Promise<void>;
   
   // Enrollments
   getEnrollments(userId: string): Promise<Enrollment[]>;
+  getEnrollmentsByUser(userId: string): Promise<Enrollment[]>;
+  getEnrollmentsByCourse(courseId: string): Promise<Enrollment[]>;
   createEnrollment(enrollmentData: InsertEnrollment): Promise<Enrollment>;
   
   // Live Sessions
   getLiveSessions(): Promise<LiveSession[]>;
   createLiveSession(sessionData: InsertLiveSession): Promise<LiveSession>;
+  updateLiveSessionStatus(id: string, status: 'scheduled' | 'live' | 'ended', attendees?: number): Promise<LiveSession>;
   
   // Assignments
   getAssignments(courseId: string): Promise<Assignment[]>;
@@ -27,7 +35,16 @@ interface IStorage {
   
   // Forums
   getForumPosts(courseId: string): Promise<Forum[]>;
+  getForumPostsByCourse(courseId: string): Promise<Forum[]>;
   createForumPost(forumData: InsertForum): Promise<Forum>;
+  
+  // Analytics
+  getAnalytics(): Promise<{
+    totalStudents: number;
+    activeCourses: number;
+    totalEnrollments: number;
+    avgCompletionRate: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -39,6 +56,23 @@ export class DatabaseStorage implements IStorage {
   async getUserById(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
+  }
+
+  async getUserByWallet(walletAddress: string): Promise<User | undefined> {
+    return this.getUser(walletAddress);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async updateUserTokens(id: string, tokens: Record<string, string>): Promise<User> {
+    const [user] = await db.update(users)
+      .set({ tokenBalances: tokens })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
   }
 
   async createUser(userData: InsertUser): Promise<User> {
@@ -71,6 +105,41 @@ export class DatabaseStorage implements IStorage {
 
   async getEnrollments(userId: string): Promise<Enrollment[]> {
     return await db.select().from(enrollments).where(eq(enrollments.userId, userId));
+  }
+
+  async getEnrollmentsByUser(userId: string): Promise<Enrollment[]> {
+    return this.getEnrollments(userId);
+  }
+
+  async getEnrollmentsByCourse(courseId: string): Promise<Enrollment[]> {
+    return await db.select().from(enrollments).where(eq(enrollments.courseId, courseId));
+  }
+
+  async updateCourse(id: string, updates: Partial<InsertCourse>): Promise<Course> {
+    const [course] = await db.update(courses)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(courses.id, id))
+      .returning();
+    return course;
+  }
+
+  async deleteCourse(id: string): Promise<void> {
+    await db.update(courses)
+      .set({ isActive: false })
+      .where(eq(courses.id, id));
+  }
+
+  async updateLiveSessionStatus(id: string, status: 'scheduled' | 'live' | 'ended', attendees?: number): Promise<LiveSession> {
+    const updateData: any = { status };
+    if (attendees !== undefined) {
+      updateData.currentAttendees = attendees;
+    }
+    
+    const [session] = await db.update(liveSessions)
+      .set(updateData)
+      .where(eq(liveSessions.id, id))
+      .returning();
+    return session;
   }
 
   async createEnrollment(enrollmentData: InsertEnrollment): Promise<Enrollment> {
@@ -109,12 +178,41 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(forums).where(eq(forums.courseId, courseId));
   }
 
+  async getForumPostsByCourse(courseId: string): Promise<Forum[]> {
+    return this.getForumPosts(courseId);
+  }
+
   async createForumPost(forumData: InsertForum): Promise<Forum> {
     const [forum] = await db
       .insert(forums)
       .values([forumData])
       .returning();
     return forum;
+  }
+
+  async getAnalytics(): Promise<{
+    totalStudents: number;
+    activeCourses: number;
+    totalEnrollments: number;
+    avgCompletionRate: number;
+  }> {
+    const [stats] = await db.execute(sql`
+      SELECT 
+        COUNT(DISTINCT u.id) as total_students,
+        COUNT(DISTINCT c.id) as active_courses,
+        COUNT(DISTINCT e.id) as total_enrollments,
+        COALESCE(AVG(e.progress), 0) as avg_completion_rate
+      FROM users u
+      LEFT JOIN enrollments e ON u.id = e.user_id
+      LEFT JOIN courses c ON c.is_active = true
+    `);
+    
+    return {
+      totalStudents: Number(stats.total_students) || 0,
+      activeCourses: Number(stats.active_courses) || 0,
+      totalEnrollments: Number(stats.total_enrollments) || 0,
+      avgCompletionRate: Number(stats.avg_completion_rate) || 0
+    };
   }
 }
 
