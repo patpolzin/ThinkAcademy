@@ -31,6 +31,7 @@ interface IStorage {
   
   // Live Sessions
   getLiveSessions(): Promise<LiveSession[]>;
+  getLiveSession(id: string): Promise<LiveSession | undefined>;
   createLiveSession(sessionData: InsertLiveSession): Promise<LiveSession>;
   updateLiveSessionStatus(id: string, status: 'scheduled' | 'live' | 'ended', attendees?: number): Promise<LiveSession>;
   
@@ -177,11 +178,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEnrollment(enrollmentData: InsertEnrollment): Promise<Enrollment> {
-    const [enrollment] = await db
-      .insert(enrollments)
-      .values([enrollmentData])
-      .returning();
-    return enrollment;
+    try {
+      const [enrollment] = await db
+        .insert(enrollments)
+        .values(enrollmentData)
+        .returning();
+      return enrollment;
+    } catch (error) {
+      console.error('Database error creating enrollment:', error);
+      throw new Error(`Failed to create enrollment: ${error.message}`);
+    }
   }
 
   async updateEnrollmentProgress(enrollmentId: string, progress: number): Promise<Enrollment> {
@@ -209,6 +215,11 @@ export class DatabaseStorage implements IStorage {
 
   async getLiveSessions(): Promise<LiveSession[]> {
     return await db.select().from(liveSessions);
+  }
+
+  async getLiveSession(id: string): Promise<LiveSession | undefined> {
+    const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
+    return session || undefined;
   }
 
   async createLiveSession(sessionData: InsertLiveSession): Promise<LiveSession> {
@@ -252,11 +263,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createReminder(reminderData: InsertReminder): Promise<Reminder> {
-    const [reminder] = await db
-      .insert(reminders)
-      .values([reminderData])
-      .returning();
-    return reminder;
+    try {
+      const [reminder] = await db
+        .insert(reminders)
+        .values(reminderData)
+        .returning();
+      return reminder;
+    } catch (error) {
+      console.error('Database error creating reminder:', error);
+      throw new Error(`Failed to create reminder: ${error.message}`);
+    }
   }
 
   async deleteReminder(id: string): Promise<void> {

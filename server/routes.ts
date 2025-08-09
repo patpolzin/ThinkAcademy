@@ -200,14 +200,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/enrollments", async (req, res) => {
     try {
+      console.log("Enrollment request body:", req.body);
       const enrollmentData = insertEnrollmentSchema.parse(req.body);
+      console.log("Parsed enrollment data:", enrollmentData);
       const enrollment = await storage.createEnrollment(enrollmentData);
       res.json(enrollment);
     } catch (error) {
+      console.error("Enrollment error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid enrollment data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to create enrollment" });
+      res.status(500).json({ error: "Failed to create enrollment", details: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -276,7 +279,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/reminders", async (req, res) => {
     try {
-      const reminderData = req.body;
+      console.log("Reminder request body:", req.body);
+      const reminderData = {
+        ...req.body,
+        reminderTime: new Date(req.body.reminderTime)
+      };
       const reminder = await storage.createReminder(reminderData);
 
       // Trigger webhook for Make.com integration
@@ -322,7 +329,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(reminder);
     } catch (error) {
-      res.status(500).json({ error: "Failed to create reminder" });
+      console.error("Reminder error:", error);
+      res.status(500).json({ error: "Failed to create reminder", details: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
