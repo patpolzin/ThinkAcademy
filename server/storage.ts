@@ -12,7 +12,14 @@ interface IStorage {
   updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
   updateUserTokens(id: string, tokens: Record<string, string>): Promise<User>;
   makeUserAdmin(id: string): Promise<User>;
-  makeUserTeacher(id: string): Promise<User>;
+  makeUserInstructor(id: string): Promise<User>;
+  updateUserProfile(walletAddress: string, updates: Partial<InsertUser>): Promise<User>;
+  getUserProgress(userId: string): Promise<{
+    totalCoursesEnrolled: number;
+    totalCoursesCompleted: number;
+    totalCertificatesEarned: number;
+    recentEnrollments: Enrollment[];
+  }>;
   
   // Courses
   getCourses(): Promise<Course[]>;
@@ -102,12 +109,53 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async makeUserTeacher(id: string): Promise<User> {
+  async makeUserInstructor(id: string): Promise<User> {
     const [user] = await db.update(users)
-      .set({ isTeacher: true })
+      .set({ isInstructor: true })
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async updateUserProfile(walletAddress: string, updates: Partial<InsertUser>): Promise<User> {
+    const [user] = await db.update(users)
+      .set({ 
+        ...updates,
+        lastLoginAt: new Date(),
+        profileCompletionScore: this.calculateProfileCompletion(updates)
+      })
+      .where(eq(users.walletAddress, walletAddress.toLowerCase()))
+      .returning();
+    return user;
+  }
+
+  private calculateProfileCompletion(userData: Partial<InsertUser>): number {
+    let score = 0;
+    if (userData.displayName) score += 20;
+    if (userData.bio) score += 20;
+    if (userData.profilePicture) score += 20;
+    if (userData.contactEmail) score += 20;
+    if (userData.contactPhone) score += 20;
+    return score;
+  }
+
+  async getUserProgress(userId: string): Promise<{
+    totalCoursesEnrolled: number;
+    totalCoursesCompleted: number;
+    totalCertificatesEarned: number;
+    recentEnrollments: Enrollment[];
+  }> {
+    const userEnrollments = await db.select().from(enrollments).where(eq(enrollments.userId, userId));
+    const completedCourses = userEnrollments.filter(e => (e.progress || 0) >= 100);
+    const certificatesEarned = userEnrollments.filter(e => e.certificateIssued);
+    const recentEnrollments = userEnrollments.slice(-5);
+
+    return {
+      totalCoursesEnrolled: userEnrollments.length,
+      totalCoursesCompleted: completedCourses.length,
+      totalCertificatesEarned: certificatesEarned.length,
+      recentEnrollments
+    };
   }
 
   async createUser(userData: InsertUser): Promise<User> {

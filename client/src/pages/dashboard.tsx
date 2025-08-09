@@ -46,7 +46,7 @@ export default function Dashboard() {
     profilePicture: '',
     bio: '',
     isAdmin: address ? address.toLowerCase().endsWith('000') : false, // Simple admin check
-    isTeacher: address ? address.toLowerCase().endsWith('111') : false, // Simple teacher check
+    isInstructor: address ? address.toLowerCase().endsWith('111') : false, // Simple instructor check
     tokenBalances: tokenBalances || {}
   };
 
@@ -65,6 +65,7 @@ export default function Dashboard() {
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'live', label: 'Live Sessions', icon: Video },
     ...(user?.isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
+    ...(user?.isInstructor ? [{ id: 'instructor', label: 'Instructor', icon: Users }] : []),
   ];
 
   const stats = [

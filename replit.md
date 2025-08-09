@@ -10,6 +10,8 @@ Color scheme: Cyan/teal primary colors with dark mode as default.
 Authentication: MetaMask wallet connection (fully functional) and Privy email+assigned wallet (requires Replit CSP configuration).
 UI: Single "Login" button in header navigation (removed duplicate login button from main content).
 Deployment: Interested in Vercel deployment for full Privy authentication support.
+Database: Supabase integration for comprehensive user management with wallet address mapping, enrollment history, certificate tracking, and permission-based UI access.
+User Management: Admin/instructor permissions controlled via Supabase with dynamic UI visibility based on user roles.
 
 # System Architecture
 
@@ -36,10 +38,11 @@ Deployment: Interested in Vercel deployment for full Privy authentication suppor
 - **Access Control**: Course and session access based on token requirements
 
 ## Database Schema
-- **Users**: Wallet addresses, email, token balances, admin flags
-- **Courses**: Content metadata, instructor info, token requirements
-- **Enrollments**: User progress tracking, completion status
-- **Live Sessions**: Scheduled events with token-based access control
+- **Users**: Wallet addresses, email, display name, profile pictures, contact info, token balances, admin/instructor flags, completion statistics
+- **Courses**: Content metadata, instructor info, token requirements, lesson/assignment counts
+- **Enrollments**: User progress tracking, completion status, certificate issuance with proper foreign key relationships
+- **Live Sessions**: Scheduled events with token-based access control and reminder integration
+- **Reminders**: User-specific notifications with webhook integration for Make.com automation
 - **Assignments & Forums**: Course-related content and discussions
 
 ## Token Integration

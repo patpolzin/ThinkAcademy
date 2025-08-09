@@ -17,7 +17,11 @@ export const users = pgTable("users", {
   connectedWalletType: text("connected_wallet_type"),
   tokenBalances: jsonb("token_balances").$type<Record<string, string>>().default({}),
   isAdmin: boolean("is_admin").default(false),
-  isTeacher: boolean("is_teacher").default(false),
+  isInstructor: boolean("is_instructor").default(false),
+  totalCoursesCompleted: integer("total_courses_completed").default(0),
+  totalCertificatesEarned: integer("total_certificates_earned").default(0),
+  profileCompletionScore: integer("profile_completion_score").default(0),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

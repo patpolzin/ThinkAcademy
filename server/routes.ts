@@ -67,6 +67,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update user profile
+  app.put("/api/users/:walletAddress/profile", async (req, res) => {
+    try {
+      const updates = req.body;
+      const user = await storage.updateUserProfile(req.params.walletAddress, updates);
+      res.json(user);
+    } catch (error) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ error: "Failed to update user profile" });
+    }
+  });
+
+  app.get("/api/users/:userId/progress", async (req, res) => {
+    try {
+      const progress = await storage.getUserProgress(req.params.userId);
+      res.json(progress);
+    } catch (error) {
+      console.error("Progress fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch user progress" });
+    }
+  });
+
   app.put("/api/users/:id", async (req, res) => {
     try {
       const { displayName, profilePicture, bio } = req.body;
@@ -97,12 +118,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/make-teacher/:id", async (req, res) => {
+  app.post("/api/admin/make-instructor/:id", async (req, res) => {
     try {
-      const user = await storage.makeUserTeacher(req.params.id);
+      const user = await storage.makeUserInstructor(req.params.id);
       res.json(user);
     } catch (error) {
-      res.status(500).json({ error: "Failed to make user teacher" });
+      res.status(500).json({ error: "Failed to make user instructor" });
     }
   });
 

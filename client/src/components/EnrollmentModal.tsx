@@ -20,12 +20,16 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
 
   const enrollMutation = useMutation({
     mutationFn: async () => {
+      // First get the user's database ID from their wallet address
+      const userResponse = await apiRequest(`/api/users/${address}`, 'GET');
+      const userData = await userResponse.json();
+      
       return apiRequest('/api/enrollments', 'POST', {
-        userId: address,
+        userId: userData.id, // Use database ID, not wallet address
         courseId: course.id,
         progress: 0,
-        totalLessons: 10, // Mock value
-        totalAssignments: 3 // Mock value
+        totalLessons: course.totalLessons || 10,
+        totalAssignments: course.totalAssignments || 3
       });
     },
     onSuccess: () => {
