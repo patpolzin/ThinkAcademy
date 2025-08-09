@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertCourseSchema, insertEnrollmentSchema, insertLiveSessionSchema } from "@shared/schema";
+import { insertUserSchema, insertCourseSchema, insertEnrollmentSchema, insertLiveSessionSchema, insertReminderSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -66,6 +66,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user profile
+  app.put("/api/users/:id", async (req, res) => {
+    try {
+      const { displayName, profilePicture, bio } = req.body;
+      const user = await storage.updateUser(req.params.id, { displayName, profilePicture, bio });
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user profile" });
+    }
+  });
+
   app.put("/api/users/:id/tokens", async (req, res) => {
     try {
       const { tokenBalances } = req.body;
@@ -73,6 +84,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(user);
     } catch (error) {
       res.status(500).json({ error: "Failed to update token balances" });
+    }
+  });
+
+  // Admin routes
+  app.post("/api/admin/make-admin/:id", async (req, res) => {
+    try {
+      const user = await storage.makeUserAdmin(req.params.id);
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to make user admin" });
+    }
+  });
+
+  app.post("/api/admin/make-teacher/:id", async (req, res) => {
+    try {
+      const user = await storage.makeUserTeacher(req.params.id);
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to make user teacher" });
     }
   });
 
@@ -137,6 +167,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(enrollments);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch enrollments" });
+    }
+  });
+
+  app.put("/api/enrollments/:id/progress", async (req, res) => {
+    try {
+      const { progress } = req.body;
+      const enrollment = await storage.updateEnrollmentProgress(req.params.id, progress);
+      res.json(enrollment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update progress" });
+    }
+  });
+
+  app.post("/api/enrollments/:id/certificate", async (req, res) => {
+    try {
+      const enrollment = await storage.issueCertificate(req.params.id);
+      res.json(enrollment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to issue certificate" });
     }
   });
 
@@ -212,6 +261,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(posts);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch forum posts" });
+    }
+  });
+
+  // Reminder routes
+  app.get("/api/reminders/user/:userId", async (req, res) => {
+    try {
+      const reminders = await storage.getUserReminders(req.params.userId);
+      res.json(reminders);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch reminders" });
+    }
+  });
+
+  app.post("/api/reminders", async (req, res) => {
+    try {
+      const reminderData = req.body;
+      const reminder = await storage.createReminder(reminderData);
+      res.json(reminder);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create reminder" });
+    }
+  });
+
+  app.delete("/api/reminders/:id", async (req, res) => {
+    try {
+      await storage.deleteReminder(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete reminder" });
     }
   });
 

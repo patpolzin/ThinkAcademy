@@ -7,10 +7,14 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   walletAddress: text("wallet_address").unique(),
   email: text("email").unique(),
+  displayName: text("display_name"),
+  profilePicture: text("profile_picture"),
+  bio: text("bio"),
   isEmailAuth: boolean("is_email_auth").default(false),
   connectedWalletType: text("connected_wallet_type"),
   tokenBalances: jsonb("token_balances").$type<Record<string, string>>().default({}),
   isAdmin: boolean("is_admin").default(false),
+  isTeacher: boolean("is_teacher").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -49,8 +53,20 @@ export const enrollments = pgTable("enrollments", {
   totalLessons: integer("total_lessons").default(0),
   completedAssignments: integer("completed_assignments").default(0),
   totalAssignments: integer("total_assignments").default(0),
+  certificateIssued: boolean("certificate_issued").default(false),
+  certificateIssuedAt: timestamp("certificate_issued_at"),
   enrolledAt: timestamp("enrolled_at").defaultNow(),
   lastAccessedAt: timestamp("last_accessed_at").defaultNow(),
+});
+
+// Add reminders table
+export const reminders = pgTable("reminders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sessionId: varchar("session_id").notNull().references(() => liveSessions.id, { onDelete: "cascade" }),
+  reminderTime: timestamp("reminder_time").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const liveSessions = pgTable("live_sessions", {
@@ -122,6 +138,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   enrollments: many(enrollments),
   assignmentSubmissions: many(assignmentSubmissions),
   forumPosts: many(forums),
+  reminders: many(reminders),
 }));
 
 export const coursesRelations = relations(courses, ({ many }) => ({
@@ -136,8 +153,14 @@ export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
   course: one(courses, { fields: [enrollments.courseId], references: [courses.id] }),
 }));
 
-export const liveSessionsRelations = relations(liveSessions, ({ one }) => ({
+export const liveSessionsRelations = relations(liveSessions, ({ one, many }) => ({
   course: one(courses, { fields: [liveSessions.courseId], references: [courses.id] }),
+  reminders: many(reminders),
+}));
+
+export const remindersRelations = relations(reminders, ({ one }) => ({
+  user: one(users, { fields: [reminders.userId], references: [users.id] }),
+  session: one(liveSessions, { fields: [reminders.sessionId], references: [liveSessions.id] }),
 }));
 
 export const assignmentsRelations = relations(assignments, ({ one, many }) => ({
@@ -162,6 +185,7 @@ export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id:
 export const insertLiveSessionSchema = createInsertSchema(liveSessions).omit({ id: true, createdAt: true });
 export const insertAssignmentSchema = createInsertSchema(assignments).omit({ id: true, createdAt: true });
 export const insertForumSchema = createInsertSchema(forums).omit({ id: true, createdAt: true, lastReplyAt: true });
+export const insertReminderSchema = createInsertSchema(reminders).omit({ id: true, createdAt: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -177,3 +201,5 @@ export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
 export type AssignmentSubmission = typeof assignmentSubmissions.$inferSelect;
 export type Forum = typeof forums.$inferSelect;
 export type InsertForum = z.infer<typeof insertForumSchema>;
+export type Reminder = typeof reminders.$inferSelect;
+export type InsertReminder = z.infer<typeof insertReminderSchema>;

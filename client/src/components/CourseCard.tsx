@@ -27,9 +27,10 @@ interface CourseCardProps {
   course: Course;
   enrollment?: Enrollment;
   compact?: boolean;
+  onEnroll?: (course: Course) => void;
 }
 
-export default function CourseCard({ course, enrollment, compact = false }: CourseCardProps) {
+export default function CourseCard({ course, enrollment, compact = false, onEnroll }: CourseCardProps) {
   const canAccess = true; // Mock access check - replace with actual token verification
 
   const getTokenRequirementDisplay = () => {
@@ -135,6 +136,7 @@ export default function CourseCard({ course, enrollment, compact = false }: Cour
           <p className="text-sm text-slate-600">by {course.instructor}</p>
           <Button 
             disabled={!canAccess}
+            onClick={() => enrollment ? null : onEnroll?.(course)}
             data-testid={`button-enroll-${course.id}`}
           >
             {enrollment ? 'Continue' : canAccess ? 'Enroll' : 'Locked'}

@@ -1,4 +1,4 @@
-import { users, courses, enrollments, liveSessions, assignments, forums, type User, type Course, type Enrollment, type LiveSession, type Assignment, type Forum, type InsertUser, type InsertCourse, type InsertEnrollment, type InsertLiveSession, type InsertAssignment, type InsertForum } from "@shared/schema";
+import { users, courses, enrollments, liveSessions, assignments, forums, reminders, type User, type Course, type Enrollment, type LiveSession, type Assignment, type Forum, type Reminder, type InsertUser, type InsertCourse, type InsertEnrollment, type InsertLiveSession, type InsertAssignment, type InsertForum, type InsertReminder } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -9,7 +9,10 @@ interface IStorage {
   getUserByWallet(walletAddress: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(userData: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
   updateUserTokens(id: string, tokens: Record<string, string>): Promise<User>;
+  makeUserAdmin(id: string): Promise<User>;
+  makeUserTeacher(id: string): Promise<User>;
   
   // Courses
   getCourses(): Promise<Course[]>;
@@ -23,6 +26,8 @@ interface IStorage {
   getEnrollmentsByUser(userId: string): Promise<Enrollment[]>;
   getEnrollmentsByCourse(courseId: string): Promise<Enrollment[]>;
   createEnrollment(enrollmentData: InsertEnrollment): Promise<Enrollment>;
+  updateEnrollmentProgress(enrollmentId: string, progress: number): Promise<Enrollment>;
+  issueCertificate(enrollmentId: string): Promise<Enrollment>;
   
   // Live Sessions
   getLiveSessions(): Promise<LiveSession[]>;
@@ -37,6 +42,11 @@ interface IStorage {
   getForumPosts(courseId: string): Promise<Forum[]>;
   getForumPostsByCourse(courseId: string): Promise<Forum[]>;
   createForumPost(forumData: InsertForum): Promise<Forum>;
+  
+  // Reminders
+  getUserReminders(userId: string): Promise<Reminder[]>;
+  createReminder(reminderData: InsertReminder): Promise<Reminder>;
+  deleteReminder(id: string): Promise<void>;
   
   // Analytics
   getAnalytics(): Promise<{
@@ -67,9 +77,33 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async updateUser(id: string, updates: Partial<InsertUser>): Promise<User> {
+    const [user] = await db.update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
   async updateUserTokens(id: string, tokens: Record<string, string>): Promise<User> {
     const [user] = await db.update(users)
       .set({ tokenBalances: tokens })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async makeUserAdmin(id: string): Promise<User> {
+    const [user] = await db.update(users)
+      .set({ isAdmin: true })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async makeUserTeacher(id: string): Promise<User> {
+    const [user] = await db.update(users)
+      .set({ isTeacher: true })
       .where(eq(users.id, id))
       .returning();
     return user;
@@ -150,6 +184,29 @@ export class DatabaseStorage implements IStorage {
     return enrollment;
   }
 
+  async updateEnrollmentProgress(enrollmentId: string, progress: number): Promise<Enrollment> {
+    const [enrollment] = await db.update(enrollments)
+      .set({ 
+        progress,
+        lastAccessedAt: new Date(),
+        ...(progress >= 100 ? { certificateIssued: true, certificateIssuedAt: new Date() } : {})
+      })
+      .where(eq(enrollments.id, enrollmentId))
+      .returning();
+    return enrollment;
+  }
+
+  async issueCertificate(enrollmentId: string): Promise<Enrollment> {
+    const [enrollment] = await db.update(enrollments)
+      .set({ 
+        certificateIssued: true,
+        certificateIssuedAt: new Date()
+      })
+      .where(eq(enrollments.id, enrollmentId))
+      .returning();
+    return enrollment;
+  }
+
   async getLiveSessions(): Promise<LiveSession[]> {
     return await db.select().from(liveSessions);
   }
@@ -188,6 +245,24 @@ export class DatabaseStorage implements IStorage {
       .values([forumData])
       .returning();
     return forum;
+  }
+
+  async getUserReminders(userId: string): Promise<Reminder[]> {
+    return await db.select().from(reminders).where(and(eq(reminders.userId, userId), eq(reminders.isActive, true)));
+  }
+
+  async createReminder(reminderData: InsertReminder): Promise<Reminder> {
+    const [reminder] = await db
+      .insert(reminders)
+      .values([reminderData])
+      .returning();
+    return reminder;
+  }
+
+  async deleteReminder(id: string): Promise<void> {
+    await db.update(reminders)
+      .set({ isActive: false })
+      .where(eq(reminders.id, id));
   }
 
   async getAnalytics(): Promise<{

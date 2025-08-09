@@ -4,23 +4,21 @@ import WalletConnect from "@/components/WalletConnect";
 import CourseCard from "@/components/CourseCard";
 import LiveSessionCard from "@/components/LiveSessionCard";
 import CreateCourseModal from "@/components/CreateCourseModal";
+import EnrollmentModal from "@/components/EnrollmentModal";
+import ProfileModal from "@/components/ProfileModal";
 import AuthModal from "@/components/AuthModal";
 import { useWallet } from "@/components/WalletProvider";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard } from "lucide-react";
+import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard, User } from "lucide-react";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showCreateCourse, setShowCreateCourse] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
   const { address, isConnected, tokenBalances } = useWallet();
   
-  // Mock user object for now
-  const user = {
-    id: address,
-    isAdmin: address ? address.toLowerCase().endsWith('000') : false, // Simple admin check
-    tokenBalances: tokenBalances
-  };
-
   const { data: courses = [] } = useQuery({
     queryKey: ['/api/courses'],
     enabled: isConnected,
@@ -32,9 +30,25 @@ export default function Dashboard() {
   });
 
   const { data: enrollments = [] } = useQuery({
-    queryKey: ['/api/enrollments/user', user?.id],
-    enabled: isConnected && !!user?.id,
+    queryKey: ['/api/enrollments/user', address],
+    enabled: isConnected && !!address,
   });
+
+  // Get user data - would be from actual API in real app
+  const { data: userData } = useQuery({
+    queryKey: ['/api/users', address],
+    enabled: isConnected && !!address,
+  });
+
+  const user = userData || {
+    id: address,
+    displayName: '',
+    profilePicture: '',
+    bio: '',
+    isAdmin: address ? address.toLowerCase().endsWith('000') : false, // Simple admin check
+    isTeacher: address ? address.toLowerCase().endsWith('111') : false, // Simple teacher check
+    tokenBalances: tokenBalances || {}
+  };
 
   // Type the query results properly
   const typedCourses = courses as any[];
@@ -211,9 +225,20 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {typedCourses.map((course: any) => (
-                <CourseCard key={course.id} course={course} />
-              ))}
+              {typedCourses.map((course: any) => {
+                const enrollment = typedEnrollments.find((e: any) => e.courseId === course.id);
+                return (
+                  <CourseCard 
+                    key={course.id} 
+                    course={course} 
+                    enrollment={enrollment}
+                    onEnroll={(course) => {
+                      setSelectedCourse(course);
+                      setShowEnrollmentModal(true);
+                    }}
+                  />
+                );
+              })}
               {typedCourses.length === 0 && (
                 <div className="col-span-full text-center py-12">
                   <p className="text-slate-500">No courses available</p>
@@ -365,7 +390,19 @@ export default function Dashboard() {
                 <span className="text-cyan-500">U</span>THINK
               </h1>
             </div>
-            <WalletConnect />
+            <div className="flex items-center space-x-3">
+              {isConnected && (
+                <button
+                  onClick={() => setShowProfileModal(true)}
+                  className="flex items-center space-x-2 text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+                  data-testid="button-profile"
+                >
+                  <User className="w-5 h-5" />
+                  <span className="hidden sm:inline">Profile</span>
+                </button>
+              )}
+              <WalletConnect />
+            </div>
           </div>
         </div>
       </header>
@@ -424,6 +461,25 @@ export default function Dashboard() {
           onSave={(courseData) => {
             console.log('New course created:', courseData);
           }}
+        />
+      )}
+
+      {showProfileModal && (
+        <ProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          user={user}
+        />
+      )}
+
+      {showEnrollmentModal && selectedCourse && (
+        <EnrollmentModal
+          isOpen={showEnrollmentModal}
+          onClose={() => {
+            setShowEnrollmentModal(false);
+            setSelectedCourse(null);
+          }}
+          course={selectedCourse}
         />
       )}
     </div>

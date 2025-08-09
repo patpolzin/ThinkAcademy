@@ -1,5 +1,6 @@
 import { Calendar, Clock, Users, Video, Play, Lock } from 'lucide-react';
 import { Button } from './ui/button';
+import ReminderButton from './ReminderButton';
 
 interface LiveSession {
   id: string;
@@ -165,27 +166,30 @@ export default function LiveSessionCard({ session, compact = false }: LiveSessio
           </div>
         </div>
         
-        <Button 
-          className="w-full"
-          disabled={!canAccess}
-          data-testid={`button-join-session-${session.id}`}
-        >
-          {session.status === 'LIVE' ? (
-            <>
-              <Play className="w-4 h-4 mr-2" />
-              Join Live Session
-            </>
-          ) : session.status === 'ENDED' ? (
-            <>
-              <Video className="w-4 h-4 mr-2" />
-              Watch Recording
-            </>
-          ) : canAccess ? (
-            'Set Reminder'
-          ) : (
-            'Access Locked'
-          )}
-        </Button>
+        <div className="flex items-center space-x-3">
+          <ReminderButton session={session} />
+          <Button 
+            className="flex-1"
+            disabled={!canAccess}
+            data-testid={`button-join-session-${session.id}`}
+          >
+            {session.status === 'LIVE' ? (
+              <>
+                <Play className="w-4 h-4 mr-2" />
+                Join Live Session
+              </>
+            ) : session.status === 'ENDED' ? (
+              <>
+                <Video className="w-4 h-4 mr-2" />
+                Watch Recording
+              </>
+            ) : canAccess ? (
+              'Join Session'
+            ) : (
+              'Access Locked'
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

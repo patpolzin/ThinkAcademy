@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { X, BookOpen, Upload, Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface CreateCourseModalProps {
@@ -11,22 +14,50 @@ interface CreateCourseModalProps {
 }
 
 export default function CreateCourseModal({ isOpen, onClose, onSave }: CreateCourseModalProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const [courseData, setCourseData] = useState({
     title: '',
     description: '',
     instructor: '',
     category: '',
     duration: '',
+    imageUrl: '',
     tokenRequirement: {
       type: 'NONE' as 'NONE' | 'ERC20' | 'NFT' | 'EITHER',
       minAmount: '',
-      tokenName: ''
+      tokenName: '',
+      tokenAddress: ''
+    }
+  });
+
+  const createCourseMutation = useMutation({
+    mutationFn: async (data: typeof courseData) => {
+      return apiRequest('/api/courses', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
     },
-    content: []
+    onSuccess: () => {
+      toast({ title: "Course created successfully!" });
+      queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+      handleClose();
+    },
+    onError: () => {
+      toast({ title: "Failed to create course", variant: "destructive" });
+    }
   });
 
   const handleSave = () => {
-    onSave(courseData);
+    if (!courseData.title || !courseData.instructor) {
+      toast({ title: "Please fill in required fields", variant: "destructive" });
+      return;
+    }
+    createCourseMutation.mutate(courseData);
+  };
+
+  const handleClose = () => {
     onClose();
     // Reset form
     setCourseData({
@@ -35,12 +66,13 @@ export default function CreateCourseModal({ isOpen, onClose, onSave }: CreateCou
       instructor: '',
       category: '',
       duration: '',
+      imageUrl: '',
       tokenRequirement: {
         type: 'NONE',
         minAmount: '',
-        tokenName: ''
-      },
-      content: []
+        tokenName: '',
+        tokenAddress: ''
+      }
     });
   };
 
