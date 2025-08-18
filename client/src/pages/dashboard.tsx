@@ -182,15 +182,19 @@ export default function Dashboard() {
               <div className="card-content rounded-xl shadow-sm p-6 animate-card animate-slide-up">
                 <h3 className="text-lg font-semibold text-high-contrast mb-4">Continue Learning</h3>
                 <div className="space-y-4">
-                  {typedEnrollments.slice(0, 2).map((enrollment: any, index: number) => (
-                    <div key={enrollment.id} className="animate-fade-in" style={{ animationDelay: `${index * 150}ms` }}>
-                      <CourseCard 
-                        course={enrollment.course} 
-                        enrollment={enrollment}
-                        compact={true}
-                      />
-                    </div>
-                  ))}
+                  {typedEnrollments.slice(0, 2).map((enrollment: any, index: number) => {
+                    // Find the course from the courses list using course_id
+                    const course = typedCourses.find((c: any) => c.id === enrollment.course_id);
+                    return (
+                      <div key={enrollment.id} className="animate-fade-in" style={{ animationDelay: `${index * 150}ms` }}>
+                        <CourseCard 
+                          course={course} 
+                          enrollment={enrollment}
+                          compact={true}
+                        />
+                      </div>
+                    );
+                  })}
                   {typedEnrollments.length === 0 && (
                     <p className="text-medium-contrast text-center py-8 animate-pulse-gentle">No enrolled courses yet</p>
                   )}
@@ -241,7 +245,7 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {typedCourses.map((course: any) => {
-                const enrollment = typedEnrollments.find((e: any) => e.courseId === course.id);
+                const enrollment = typedEnrollments.find((e: any) => e.course_id === course.id);
                 return (
                   <CourseCard 
                     key={course.id} 

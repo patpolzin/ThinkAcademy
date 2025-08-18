@@ -4,17 +4,18 @@ import { Button } from './ui/button';
 interface Course {
   id: string;
   title: string;
-  instructor: string;
+  instructor?: string;
+  instructorName?: string;
   description: string;
-  duration: number;
-  studentCount: number;
-  thumbnail: string;
+  duration?: number;
+  studentCount?: number;
+  thumbnail?: string;
   tokenRequirement: {
     type: 'NONE' | 'ERC20' | 'NFT' | 'EITHER';
     minAmount?: number;
     tokenName?: string;
   };
-  isActive: boolean;
+  isActive?: boolean;
 }
 
 interface Enrollment {
@@ -31,7 +32,21 @@ interface CourseCardProps {
 }
 
 export default function CourseCard({ course, enrollment, compact = false, onEnroll }: CourseCardProps) {
+  // Early return if course is undefined/null
+  if (!course) {
+    return (
+      <div className="bg-slate-100 rounded-xl p-6 animate-pulse">
+        <div className="h-4 bg-slate-300 rounded mb-2"></div>
+        <div className="h-3 bg-slate-300 rounded mb-4 w-3/4"></div>
+        <div className="h-2 bg-slate-300 rounded"></div>
+      </div>
+    );
+  }
+
   const canAccess = true; // Mock access check - replace with actual token verification
+  const instructor = course.instructor || course.instructorName || 'Unknown Instructor';
+  const duration = course.duration || 10; // Default 10 hours
+  const studentCount = course.studentCount || 0;
 
   const getTokenRequirementDisplay = () => {
     // Handle case where tokenRequirement might be a string (from database) or undefined
@@ -83,7 +98,7 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         />
         <div className="flex-1">
           <h4 className="font-medium text-slate-900">{course.title}</h4>
-          <p className="text-sm text-slate-600">by {course.instructor}</p>
+          <p className="text-sm text-slate-600">by {instructor}</p>
           {enrollment && (
             <div className="w-full bg-slate-200 rounded-full h-2 mt-2">
               <div 
@@ -125,11 +140,11 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         <div className="flex items-center justify-between text-sm text-slate-500 mb-4">
           <div className="flex items-center space-x-1">
             <Clock className="w-4 h-4" />
-            <span>{course.duration}h</span>
+            <span>{duration}h</span>
           </div>
           <div className="flex items-center space-x-1">
             <Users className="w-4 h-4" />
-            <span>{course.studentCount}</span>
+            <span>{studentCount}</span>
           </div>
           <div className="flex items-center space-x-1">
             <Award className="w-4 h-4" />
@@ -138,7 +153,7 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         </div>
         
         <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-600">by {course.instructor}</p>
+          <p className="text-sm text-slate-600">by {instructor}</p>
           <Button 
             disabled={!canAccess}
             onClick={() => enrollment ? null : onEnroll?.(course)}
