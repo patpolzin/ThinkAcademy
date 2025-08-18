@@ -1,8 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { DirectStorage } from "./dbDirect";
 import { insertUserSchema, insertCourseSchema, insertEnrollmentSchema, insertLiveSessionSchema, insertReminderSchema } from "@shared/schema";
 import { z } from "zod";
+
+const directDb = new DirectStorage();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
@@ -188,9 +191,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Course routes
   app.get("/api/courses", async (req, res) => {
     try {
-      const courses = await storage.getCourses();
+      const courses = await directDb.getCourses();
       res.json(courses);
     } catch (error) {
+      console.error("Course fetch error:", error);
       res.status(500).json({ error: "Failed to fetch courses" });
     }
   });
@@ -210,9 +214,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/courses", async (req, res) => {
     try {
       const courseData = insertCourseSchema.parse(req.body);
-      const course = await storage.createCourse(courseData);
+      const course = await directDb.createCourse(courseData);
       res.json(course);
     } catch (error) {
+      console.error("Course creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid course data", details: error.errors });
       }
@@ -329,7 +334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Analytics routes
   app.get("/api/analytics", async (req, res) => {
     try {
-      const analytics = await storage.getAnalytics();
+      const analytics = await directDb.getAnalytics();
       res.json(analytics);
     } catch (error) {
       console.error("Analytics fetch error:", error);

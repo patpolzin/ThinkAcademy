@@ -4,39 +4,31 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  walletAddress: text("wallet_address").unique(),
-  email: text("email").unique(),
-  displayName: text("display_name"),
-  profilePicture: text("profile_picture"),
-  bio: text("bio"),
-  contactEmail: text("contact_email"),
-  contactPhone: text("contact_phone"),
-  preferredContactMethod: text("preferred_contact_method").default('email'), // 'email', 'phone', 'none'
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  walletAddress: varchar("wallet_address", { length: 255 }).unique(),
+  email: varchar("email", { length: 255 }),
+  displayName: varchar("display_name", { length: 255 }),
+  connectedWalletType: varchar("connected_wallet_type", { length: 50 }),
   isEmailAuth: boolean("is_email_auth").default(false),
-  connectedWalletType: text("connected_wallet_type"),
   tokenBalances: jsonb("token_balances").$type<Record<string, string>>().default({}),
+  profilePicture: varchar("profile_picture", { length: 500 }),
+  contactInfo: jsonb("contact_info").$type<Record<string, string>>().default({}),
   isAdmin: boolean("is_admin").default(false),
   isInstructor: boolean("is_instructor").default(false),
-  totalCoursesCompleted: integer("total_courses_completed").default(0),
-  totalCertificatesEarned: integer("total_certificates_earned").default(0),
-  profileCompletionScore: integer("profile_completion_score").default(0),
-  lastLoginAt: timestamp("last_login_at"),
+  completedCourses: integer("completed_courses").default(0),
+  certificatesEarned: integer("certificates_earned").default(0),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const courses = pgTable("courses", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  title: text("title").notNull(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  instructor: text("instructor").notNull(),
-  instructorWallet: varchar("instructor_wallet", { length: 42 }),
-  duration: text("duration"),
-  category: text("category"),
-  difficulty: text("difficulty"),
-  imageUrl: text("image_url"),
-  maxStudents: integer("max_students"),
-  isActive: boolean("is_active").default(true),
+  category: varchar("category", { length: 100 }),
+  difficulty: varchar("difficulty", { length: 50 }),
+  instructorName: varchar("instructor_name", { length: 255 }),
+  instructorId: integer("instructor_id").references(() => users.id),
   tokenRequirement: jsonb("token_requirement").$type<{
     type: 'NONE' | 'ERC20' | 'NFT' | 'EITHER';
     tokenName?: string;
@@ -48,62 +40,48 @@ export const courses = pgTable("courses", {
       tokenAddress: string;
       minAmount: string;
     }>;
-  }>().notNull(),
+  }>(),
+  isActive: boolean("is_active").default(true),
+  lessonCount: integer("lesson_count").default(0),
+  assignmentCount: integer("assignment_count").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const enrollments = pgTable("enrollments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
-  progress: integer("progress").default(0),
-  completedLessons: integer("completed_lessons").default(0),
-  totalLessons: integer("total_lessons").default(0),
-  completedAssignments: integer("completed_assignments").default(0),
-  totalAssignments: integer("total_assignments").default(0),
-  certificateIssued: boolean("certificate_issued").default(false),
-  certificateIssuedAt: timestamp("certificate_issued_at"),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
   enrolledAt: timestamp("enrolled_at").defaultNow(),
-  lastAccessedAt: timestamp("last_accessed_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  progressPercentage: integer("progress_percentage").default(0),
+  certificateIssued: boolean("certificate_issued").default(false),
 });
 
 // Add reminders table
 export const reminders = pgTable("reminders", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  sessionId: varchar("session_id").notNull().references(() => liveSessions.id, { onDelete: "cascade" }),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sessionId: integer("session_id").notNull().references(() => liveSessions.id, { onDelete: "cascade" }),
   reminderTime: timestamp("reminder_time").notNull(),
-  isActive: boolean("is_active").default(true),
+  webhookUrl: varchar("webhook_url", { length: 500 }),
+  isSent: boolean("is_sent").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const liveSessions = pgTable("live_sessions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  instructor: text("instructor").notNull(),
-  scheduledTime: timestamp("scheduled_time").notNull(),
-  duration: integer("duration").notNull(), // in minutes
-  status: text("status").$type<'scheduled' | 'live' | 'ended'>().default('scheduled'),
-  maxAttendees: integer("max_attendees").default(100),
-  currentAttendees: integer("current_attendees").default(0),
-  recordingEnabled: boolean("recording_enabled").default(true),
-  roomUrl: text("room_url"),
-  recordingUrl: text("recording_url"),
-  tokenRequirement: jsonb("token_requirement").$type<{
-    type: 'NONE' | 'ERC20' | 'NFT' | 'EITHER';
-    tokenName?: string;
-    tokenAddress?: string;
-    minAmount?: string;
-    options?: Array<{
-      type: 'ERC20' | 'NFT';
-      tokenName: string;
-      tokenAddress: string;
-      minAmount: string;
-    }>;
-  }>().notNull(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  instructorId: integer("instructor_id").references(() => users.id),
+  courseId: integer("course_id").references(() => courses.id),
+  sessionUrl: varchar("session_url", { length: 500 }),
+  tokenRequirement: jsonb("token_requirement"),
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  duration: integer("duration").default(60),
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const assignments = pgTable("assignments", {
@@ -131,37 +109,25 @@ export const assignmentSubmissions = pgTable("assignment_submissions", {
 
 // Extended schema for comprehensive course management
 export const lessons = pgTable("lessons", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  videoUrl: text("video_url"),
   content: text("content"),
-  duration: integer("duration"), // in minutes
-  order: integer("order").notNull(),
-  isPublished: boolean("is_published").default(false),
+  videoUrl: varchar("video_url", { length: 500 }),
+  duration: integer("duration"),
+  orderIndex: integer("order_index").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const quizzes = pgTable("quizzes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
-  lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  questions: jsonb("questions").$type<Array<{
-    id: string;
-    question: string;
-    type: 'multiple-choice' | 'true-false' | 'short-answer';
-    options?: string[];
-    correctAnswer: string | string[];
-    points: number;
-  }>>().notNull(),
-  timeLimit: integer("time_limit"), // in minutes
-  attempts: integer("attempts").default(3),
-  passingScore: integer("passing_score").default(70),
-  isPublished: boolean("is_published").default(false),
+  questions: jsonb("questions").notNull().default('[]'),
+  orderIndex: integer("order_index").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -178,17 +144,15 @@ export const quizResults = pgTable("quiz_results", {
 });
 
 export const resources = pgTable("resources", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
-  lessonId: varchar("lesson_id").references(() => lessons.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  fileUrl: text("file_url").notNull(),
-  fileType: text("file_type").notNull(), // pdf, video, image, etc.
-  fileSize: integer("file_size"), // in bytes
-  isPublic: boolean("is_public").default(true),
-  uploadedBy: varchar("uploaded_by").notNull().references(() => users.id),
+  fileUrl: varchar("file_url", { length: 500 }),
+  fileType: varchar("file_type", { length: 50 }),
+  isPublic: boolean("is_public").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const forums = pgTable("forums", {
@@ -225,13 +189,7 @@ export const lessonProgress = pgTable("lesson_progress", {
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   enrollments: many(enrollments),
-  assignmentSubmissions: many(assignmentSubmissions),
-  forumPosts: many(forums),
-  forumReplies: many(forumReplies),
   reminders: many(reminders),
-  quizResults: many(quizResults),
-  lessonProgress: many(lessonProgress),
-  uploadedResources: many(resources),
 }));
 
 export const coursesRelations = relations(courses, ({ many }) => ({
@@ -249,8 +207,7 @@ export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
   course: one(courses, { fields: [enrollments.courseId], references: [courses.id] }),
 }));
 
-export const liveSessionsRelations = relations(liveSessions, ({ one, many }) => ({
-  course: one(courses, { fields: [liveSessions.courseId], references: [courses.id] }),
+export const liveSessionsRelations = relations(liveSessions, ({ many }) => ({
   reminders: many(reminders),
 }));
 
@@ -280,17 +237,12 @@ export const forumRepliesRelations = relations(forumReplies, ({ one }) => ({
   user: one(users, { fields: [forumReplies.userId], references: [users.id] }),
 }));
 
-export const lessonsRelations = relations(lessons, ({ one, many }) => ({
+export const lessonsRelations = relations(lessons, ({ one }) => ({
   course: one(courses, { fields: [lessons.courseId], references: [courses.id] }),
-  quizzes: many(quizzes),
-  resources: many(resources),
-  progress: many(lessonProgress),
 }));
 
-export const quizzesRelations = relations(quizzes, ({ one, many }) => ({
+export const quizzesRelations = relations(quizzes, ({ one }) => ({
   course: one(courses, { fields: [quizzes.courseId], references: [courses.id] }),
-  lesson: one(lessons, { fields: [quizzes.lessonId], references: [lessons.id] }),
-  results: many(quizResults),
 }));
 
 export const quizResultsRelations = relations(quizResults, ({ one }) => ({
@@ -300,8 +252,6 @@ export const quizResultsRelations = relations(quizResults, ({ one }) => ({
 
 export const resourcesRelations = relations(resources, ({ one }) => ({
   course: one(courses, { fields: [resources.courseId], references: [courses.id] }),
-  lesson: one(lessons, { fields: [resources.lessonId], references: [lessons.id] }),
-  uploader: one(users, { fields: [resources.uploadedBy], references: [users.id] }),
 }));
 
 export const lessonProgressRelations = relations(lessonProgress, ({ one }) => ({
