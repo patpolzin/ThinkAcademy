@@ -31,7 +31,20 @@ export class DirectStorage {
     try {
       const result = await sql`SELECT * FROM courses ORDER BY created_at DESC`;
       await sql.end();
-      return result;
+      
+      // Transform database response to match expected interface
+      return result.map(course => ({
+        ...course,
+        tokenRequirement: typeof course.token_requirement === 'string' 
+          ? JSON.parse(course.token_requirement) 
+          : course.token_requirement,
+        instructorName: course.instructor_name,
+        isActive: course.is_active,
+        lessonCount: course.lesson_count || 0,
+        assignmentCount: course.assignment_count || 0,
+        createdAt: course.created_at,
+        updatedAt: course.updated_at
+      }));
     } catch (error) {
       console.error('Database error getting courses:', error);
       throw error;
@@ -72,6 +85,42 @@ export class DirectStorage {
       };
     } catch (error) {
       console.error('Database error getting analytics:', error);
+      throw error;
+    }
+  }
+
+  async getUser(walletAddress: string) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`SELECT * FROM users WHERE wallet_address = ${walletAddress.toLowerCase()}`;
+      await sql.end();
+      return result[0] || null;
+    } catch (error) {
+      console.error('Database error getting user:', error);
+      throw error;
+    }
+  }
+
+  async getLiveSessions() {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`SELECT * FROM live_sessions ORDER BY scheduled_for ASC`;
+      await sql.end();
+      return result;
+    } catch (error) {
+      console.error('Database error getting live sessions:', error);
+      throw error;
+    }
+  }
+
+  async getUserEnrollments(userId: string) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`SELECT * FROM enrollments WHERE user_id = ${userId}`;
+      await sql.end();
+      return result;
+    } catch (error) {
+      console.error('Database error getting enrollments:', error);
       throw error;
     }
   }

@@ -59,12 +59,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User routes
   app.get("/api/users/:id", async (req, res) => {
     try {
-      const user = await storage.getUser(req.params.id);
+      const user = await directDb.getUser(req.params.id);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
       res.json(user);
     } catch (error) {
+      console.error("User fetch error:", error);
       res.status(500).json({ error: "Failed to fetch user" });
     }
   });
@@ -301,9 +302,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Live session routes
   app.get("/api/live-sessions", async (req, res) => {
     try {
-      const sessions = await storage.getLiveSessions();
+      const sessions = await directDb.getLiveSessions();
       res.json(sessions);
     } catch (error) {
+      console.error("Live sessions fetch error:", error);
       res.status(500).json({ error: "Failed to fetch live sessions" });
     }
   });

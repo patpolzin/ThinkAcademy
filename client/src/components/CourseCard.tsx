@@ -34,7 +34,12 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
   const canAccess = true; // Mock access check - replace with actual token verification
 
   const getTokenRequirementDisplay = () => {
-    switch (course.tokenRequirement.type) {
+    // Handle case where tokenRequirement might be a string (from database) or undefined
+    const tokenReq = typeof course.tokenRequirement === 'string' 
+      ? JSON.parse(course.tokenRequirement) 
+      : course.tokenRequirement || { type: 'NONE' };
+    
+    switch (tokenReq.type) {
       case 'NONE':
         return (
           <span className="inline-flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
@@ -46,14 +51,14 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         return (
           <span className="inline-flex items-center space-x-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">
             <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-            <span>{course.tokenRequirement.minAmount} {course.tokenRequirement.tokenName}</span>
+            <span>{tokenReq.minAmount} {tokenReq.tokenName}</span>
           </span>
         );
       case 'NFT':
         return (
           <span className="inline-flex items-center space-x-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded">
             <div className="w-2 h-2 bg-purple-500 rounded-sm"></div>
-            <span>{course.tokenRequirement.minAmount} NFT</span>
+            <span>{tokenReq.minAmount} NFT</span>
           </span>
         );
       case 'EITHER':
