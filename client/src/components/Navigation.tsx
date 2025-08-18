@@ -37,10 +37,12 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors nav-tab ${
+                activeTab === item.id ? 'active' : ''
+              } ${
                 activeTab === item.id
-                  ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  ? 'border-slate-900 text-slate-900 dark:border-white dark:text-white'
+                  : 'border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
               }`}
               data-testid={`nav-${item.id}`}
             >

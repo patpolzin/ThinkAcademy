@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard, User, Plus, ChevronRight } from "lucide-react";
 import AdminPanel from "@/components/AdminPanel";
 import InstructorPanel from "@/components/InstructorPanel";
+import { CourseCreationTest } from "@/components/CourseCreationTest";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +73,7 @@ export default function Dashboard() {
     { id: 'live', label: 'Live Sessions', icon: Video },
     ...(userData?.isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
     ...(userData?.isInstructor ? [{ id: 'instructor', label: 'Instructor', icon: Users }] : []),
+    { id: 'test', label: 'Course Creation Test', icon: Plus },
   ];
 
   const stats = [
@@ -153,11 +155,11 @@ export default function Dashboard() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((stat, index) => (
-                <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div key={index} className="card-content rounded-xl p-6 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-black text-sm">{stat.title}</p>
-                      <p className="text-2xl font-bold text-black">{stat.value}</p>
+                      <p className="text-medium-contrast text-sm">{stat.title}</p>
+                      <p className="text-2xl font-bold text-high-contrast">{stat.value}</p>
                     </div>
                     <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color}`}>
                       {typeof stat.icon === 'function' ? 
@@ -173,8 +175,8 @@ export default function Dashboard() {
             {/* Current Courses and Live Sessions */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Continue Learning */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <h3 className="text-lg font-semibold text-black mb-4">Continue Learning</h3>
+              <div className="card-content rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-high-contrast mb-4">Continue Learning</h3>
                 <div className="space-y-4">
                   {typedEnrollments.slice(0, 2).map((enrollment: any) => (
                     <CourseCard 
@@ -185,14 +187,14 @@ export default function Dashboard() {
                     />
                   ))}
                   {typedEnrollments.length === 0 && (
-                    <p className="text-black text-center py-8">No enrolled courses yet</p>
+                    <p className="text-medium-contrast text-center py-8">No enrolled courses yet</p>
                   )}
                 </div>
               </div>
 
               {/* Upcoming Sessions */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <h3 className="text-lg font-semibold text-black mb-4">Upcoming Live Sessions</h3>
+              <div className="card-content rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-high-contrast mb-4">Upcoming Live Sessions</h3>
                 <div className="space-y-4">
                   {typedLiveSessions.slice(0, 2).map((session: any) => (
                     <LiveSessionCard 
@@ -202,7 +204,7 @@ export default function Dashboard() {
                     />
                   ))}
                   {typedLiveSessions.length === 0 && (
-                    <p className="text-slate-500 text-center py-8">No upcoming sessions</p>
+                    <p className="text-medium-contrast text-center py-8">No upcoming sessions</p>
                   )}
                 </div>
               </div>
@@ -214,15 +216,15 @@ export default function Dashboard() {
         return (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-black">All Courses</h2>
+              <h2 className="text-2xl font-bold text-high-contrast">All Courses</h2>
               <div className="flex items-center space-x-4">
-                <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                <select className="input-field px-3 py-2 rounded-lg text-sm">
                   <option>All Categories</option>
                   <option>AI Agents</option>
                   <option>DeFi</option>
                   <option>NFTs</option>
                 </select>
-                <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                <select className="input-field px-3 py-2 rounded-lg text-sm">
                   <option>All Requirements</option>
                   <option>THINK Tokens</option>
                   <option>NFT Required</option>
@@ -248,7 +250,7 @@ export default function Dashboard() {
               })}
               {typedCourses.length === 0 && (
                 <div className="col-span-full text-center py-12">
-                  <p className="text-slate-500">No courses available</p>
+                  <p className="text-medium-contrast">No courses available</p>
                 </div>
               )}
             </div>
@@ -259,8 +261,8 @@ export default function Dashboard() {
         return (
           <div className="space-y-8">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-900">Live Sessions</h2>
-              <select className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+              <h2 className="text-2xl font-bold text-high-contrast">Live Sessions</h2>
+              <select className="input-field px-3 py-2 rounded-lg text-sm">
                 <option>All Sessions</option>
                 <option>Live Now</option>
                 <option>Upcoming</option>
@@ -274,7 +276,7 @@ export default function Dashboard() {
               ))}
               {typedLiveSessions.length === 0 && (
                 <div className="col-span-full text-center py-12">
-                  <p className="text-slate-500">No live sessions scheduled</p>
+                  <p className="text-medium-contrast">No live sessions scheduled</p>
                 </div>
               )}
             </div>
@@ -290,6 +292,9 @@ export default function Dashboard() {
       case 'admin':
         if (!userData?.isAdmin) return null;
         return <AdminPanel user={userData} />;
+
+      case 'test':
+        return <CourseCreationTest />;
 
       default:
         return null;
