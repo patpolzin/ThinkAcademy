@@ -317,6 +317,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add enrollment check endpoint
+  app.get("/api/enrollments/:userId/:courseId/check", async (req, res) => {
+    try {
+      const { userId, courseId } = req.params;
+      const enrollment = await directDb.checkEnrollment(userId, courseId);
+      res.json({ isEnrolled: enrollment, enrollment: enrollment });
+    } catch (error) {
+      console.error("Enrollment check error:", error);
+      res.status(500).json({ error: "Failed to check enrollment" });
+    }
+  });
+
+  // Get instructors endpoint
+  app.get("/api/users/instructors", async (req, res) => {
+    try {
+      const instructors = await directDb.getUsers({ isInstructor: true });
+      res.json(instructors.map(u => ({ id: u.id, displayName: u.display_name, email: u.email })));
+    } catch (error) {
+      console.error("Instructors fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch instructors" });
+    }
+  });
+
+  // User profile update endpoint
+  app.put("/api/users/:id", async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const updates = req.body;
+      const user = await directDb.updateUser(userId, updates);
+      res.json(user);
+    } catch (error) {
+      console.error("User update error:", error);
+      res.status(500).json({ error: "Failed to update user profile" });
+    }
+  });
+
   // Live session routes
   app.get("/api/live-sessions", async (req, res) => {
     try {

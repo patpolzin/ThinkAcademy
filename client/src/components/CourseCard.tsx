@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Clock, Users, Award, Unlock, Lock } from 'lucide-react';
 import { Button } from './ui/button';
 import { useLocation } from 'wouter';
+import EnrollmentModal from './EnrollmentModal';
 
 interface Course {
   id: string;
@@ -35,6 +37,7 @@ interface CourseCardProps {
 
 export default function CourseCard({ course, enrollment, compact = false, onEnroll }: CourseCardProps) {
   const [, setLocation] = useLocation();
+  const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
   
   // Early return if course is undefined/null
   if (!course) {
@@ -122,13 +125,18 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         <Button 
           size="sm" 
           className="animate-button-subtle" 
-          data-testid={`button-continue-${course.id}`}
+          data-testid={`button-${enrollment ? 'continue' : 'start'}-${course.id}`}
           onClick={(e) => {
             e.stopPropagation();
-            handleCourseClick();
+            if (enrollment) {
+              handleCourseClick(); // Navigate to course content
+            } else if (canAccess) {
+              setShowEnrollmentModal(true); // Show enrollment modal
+            }
           }}
+          disabled={!canAccess && !enrollment}
         >
-          {enrollment ? 'Continue' : 'Start'}
+          {enrollment ? 'Continue' : (canAccess ? 'Start' : 'Locked')}
         </Button>
       </div>
     );
@@ -177,18 +185,18 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         <div className="flex items-center justify-between">
           <p className="text-sm text-slate-600">by {instructor}</p>
           <Button 
-            disabled={!canAccess}
+            disabled={!canAccess && !enrollment}
             onClick={(e) => {
               e.stopPropagation();
               if (enrollment) {
-                handleCourseClick();
-              } else {
-                onEnroll?.(course);
+                handleCourseClick(); // Navigate to course content
+              } else if (canAccess) {
+                setShowEnrollmentModal(true); // Show enrollment modal
               }
             }}
-            data-testid={`button-enroll-${course.id}`}
+            data-testid={`button-${enrollment ? 'continue' : 'enroll'}-${course.id}`}
           >
-            {enrollment ? 'Continue' : canAccess ? 'Enroll' : 'Locked'}
+            {enrollment ? 'Continue Learning' : (canAccess ? 'Enroll Now' : 'Locked')}
           </Button>
         </div>
         
@@ -207,6 +215,19 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
           </div>
         )}
       </div>
+
+      {/* Enrollment Modal */}
+      {showEnrollmentModal && (
+        <EnrollmentModal
+          course={course}
+          isOpen={showEnrollmentModal}
+          onClose={() => setShowEnrollmentModal(false)}
+          onSuccess={() => {
+            setShowEnrollmentModal(false);
+            // Optionally refresh data here
+          }}
+        />
+      )}
     </div>
   );
 }

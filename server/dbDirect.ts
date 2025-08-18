@@ -202,11 +202,50 @@ export class DirectStorage {
   async checkEnrollment(userId: string, courseId: string) {
     const sql = createDbConnection();
     try {
-      const result = await sql`SELECT * FROM enrollments WHERE user_id = ${userId} AND course_id = ${courseId}`;
+      // Handle wallet address conversion if needed
+      let actualUserId = userId;
+      if (typeof userId === 'string' && userId.startsWith('0x')) {
+        const userResult = await sql`SELECT id FROM users WHERE wallet_address = ${userId.toLowerCase()}`;
+        if (userResult.length === 0) {
+          await sql.end();
+          return null;
+        }
+        actualUserId = userResult[0].id;
+      }
+      
+      const result = await sql`SELECT * FROM enrollments WHERE user_id = ${actualUserId} AND course_id = ${courseId}`;
       await sql.end();
-      return result.length > 0;
+      return result.length > 0 ? result[0] : null;
     } catch (error) {
       console.error('Database error checking enrollment:', error);
+      throw error;
+    }
+  }
+
+  async updateUser(userId: string, updates: any) {
+    const sql = createDbConnection();
+    try {
+      let actualUserId = userId;
+      if (typeof userId === 'string' && userId.startsWith('0x')) {
+        const userResult = await sql`SELECT id FROM users WHERE wallet_address = ${userId.toLowerCase()}`;
+        if (userResult.length === 0) {
+          throw new Error('User not found');
+        }
+        actualUserId = userResult[0].id;
+      }
+
+      const result = await sql`
+        UPDATE users 
+        SET display_name = COALESCE(${updates.displayName}, display_name),
+            email = COALESCE(${updates.email}, email),
+            updated_at = NOW()
+        WHERE id = ${actualUserId}
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error updating user:', error);
       throw error;
     }
   }
