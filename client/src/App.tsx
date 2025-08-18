@@ -31,12 +31,12 @@ function Router() {
 function App() {
   const AppContent = (
     <QueryClientProvider client={queryClient}>
-      <WalletProvider>
-        <TooltipProvider>
+      <TooltipProvider>
+        <WalletProvider>
           <Toaster />
           <Router />
-        </TooltipProvider>
-      </WalletProvider>
+        </WalletProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 

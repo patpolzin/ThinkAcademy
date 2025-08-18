@@ -3,7 +3,7 @@ import { useRoute } from 'wouter';
 import { CourseManagement } from '@/components/CourseManagement';
 import { StudentCourseView } from '@/components/StudentCourseView';
 import { apiRequest } from '@/lib/queryClient';
-import { useWallet } from '@/hooks/useWallet';
+import { useWallet } from '@/components/WalletProvider';
 import type { Course } from '@shared/schema';
 
 export default function CourseDetailPage() {

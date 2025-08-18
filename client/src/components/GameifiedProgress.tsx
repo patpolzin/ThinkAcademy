@@ -14,9 +14,6 @@ interface Achievement {
 }
 
 interface UserStats {
-  level: number;
-  xp: number;
-  xpToNext: number;
   coursesCompleted: number;
   currentStreak: number;
   totalHours: number;
@@ -28,45 +25,12 @@ interface GameifiedProgressProps {
   className?: string;
 }
 
-const levelThresholds = [0, 100, 250, 500, 1000, 2000, 3500, 5500, 8000, 12000, 17000];
-
 export function GameifiedProgress({ userStats, achievements, className = "" }: GameifiedProgressProps) {
-  const currentLevelXP = levelThresholds[userStats.level - 1] || 0;
-  const nextLevelXP = levelThresholds[userStats.level] || levelThresholds[levelThresholds.length - 1];
-  const progressInLevel = userStats.xp - currentLevelXP;
-  const xpForCurrentLevel = nextLevelXP - currentLevelXP;
-  const levelProgress = (progressInLevel / xpForCurrentLevel) * 100;
-
   const unlockedAchievements = achievements.filter(a => a.unlocked);
   const inProgressAchievements = achievements.filter(a => !a.unlocked && a.progress);
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Level and XP Progress */}
-      <Card className="bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2 text-cyan-800">
-            <Star className="w-5 h-5 text-cyan-500" />
-            <span>Level {userStats.level}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-600">{userStats.xp} XP</span>
-              <span className="text-slate-600">{userStats.xpToNext} XP to next level</span>
-            </div>
-            <Progress 
-              value={levelProgress} 
-              className="h-3 bg-slate-200"
-            />
-            <div className="flex justify-between text-xs text-slate-500">
-              <span>Level {userStats.level}</span>
-              <span>Level {userStats.level + 1}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -224,13 +188,13 @@ export function generateMockAchievements(userStats: UserStats): Achievement[] {
       maxProgress: 25
     },
     {
-      id: 'level-5',
-      title: 'Rising Star',
-      description: 'Reach level 5',
+      id: 'learning-master',
+      title: 'Learning Master',
+      description: 'Complete 50 hours of learning',
       icon: Star,
-      unlocked: userStats.level >= 5,
-      progress: userStats.level,
-      maxProgress: 5
+      unlocked: userStats.totalHours >= 50,
+      progress: userStats.totalHours,
+      maxProgress: 50
     }
   ];
 }
@@ -240,14 +204,8 @@ export function calculateUserStats(enrollments: any[]): UserStats {
   const completedCourses = enrollments.filter(e => e.certificate_issued || e.progress_percentage === 100).length;
   const totalProgress = enrollments.reduce((sum, e) => sum + (e.progress_percentage || 0), 0);
   const totalHours = Math.floor(totalProgress / 10); // Rough estimate
-  const xp = (completedCourses * 100) + Math.floor(totalProgress / 5);
-  const level = Math.floor(xp / 100) + 1;
-  const xpToNext = (level * 100) - xp;
   
   return {
-    level,
-    xp,
-    xpToNext,
     coursesCompleted: completedCourses,
     currentStreak: Math.min(completedCourses * 2, 14), // Mock streak based on completion
     totalHours

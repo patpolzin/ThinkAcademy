@@ -11,6 +11,14 @@ interface WalletContextType {
 
 const WalletContext = createContext<WalletContextType | null>(null);
 
+export function useWallet() {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error('useWallet must be used within a WalletProvider');
+  }
+  return context;
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
@@ -72,14 +80,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       {children}
     </WalletContext.Provider>
   );
-}
-
-export function useWallet() {
-  const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error('useWallet must be used within a WalletProvider');
-  }
-  return context;
 }
 
 // Add window.ethereum type declaration

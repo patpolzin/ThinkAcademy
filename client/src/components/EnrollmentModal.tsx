@@ -22,6 +22,9 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
     mutationFn: async () => {
       // First get the user's database ID from their wallet address
       const userResponse = await apiRequest(`/api/users/${address}`, 'GET');
+      if (!userResponse.ok) {
+        throw new Error('Failed to fetch user data');
+      }
       const userData = await userResponse.json();
       
       return apiRequest('/api/enrollments', 'POST', {
