@@ -12,6 +12,8 @@ UI: Single "Login" button in header navigation (removed duplicate login button f
 Deployment: Interested in Vercel deployment for full Privy authentication support.
 Database: Supabase integration for comprehensive user management with wallet address mapping, enrollment history, certificate tracking, and permission-based UI access.
 User Management: Admin/instructor permissions controlled via Supabase database flags (isAdmin, isInstructor) with dynamic UI visibility based on user roles. Use API endpoints or direct Supabase access to set permissions.
+Accessibility: WCAG AAA compliant contrast ratios implemented across all text elements for optimal readability.
+Animations: Comprehensive microinteractions implemented for buttons, navigation, and card components with smooth transitions, hover effects, and loading states.
 
 # System Architecture
 

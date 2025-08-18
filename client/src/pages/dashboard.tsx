@@ -155,13 +155,17 @@ export default function Dashboard() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((stat, index) => (
-                <div key={index} className="card-content rounded-xl p-6 shadow-sm">
+                <div 
+                  key={index} 
+                  className="card-content rounded-xl p-6 shadow-sm animate-card animate-fade-in"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-medium-contrast text-sm">{stat.title}</p>
-                      <p className="text-2xl font-bold text-high-contrast">{stat.value}</p>
+                      <p className="text-2xl font-bold text-high-contrast animate-bounce-subtle">{stat.value}</p>
                     </div>
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color}`}>
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${stat.color} animate-rotate`}>
                       {typeof stat.icon === 'function' ? 
                         <stat.icon /> : 
                         <stat.icon className="w-6 h-6" />
@@ -175,36 +179,38 @@ export default function Dashboard() {
             {/* Current Courses and Live Sessions */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Continue Learning */}
-              <div className="card-content rounded-xl shadow-sm p-6">
+              <div className="card-content rounded-xl shadow-sm p-6 animate-card animate-slide-up">
                 <h3 className="text-lg font-semibold text-high-contrast mb-4">Continue Learning</h3>
                 <div className="space-y-4">
-                  {typedEnrollments.slice(0, 2).map((enrollment: any) => (
-                    <CourseCard 
-                      key={enrollment.id} 
-                      course={enrollment.course} 
-                      enrollment={enrollment}
-                      compact={true}
-                    />
+                  {typedEnrollments.slice(0, 2).map((enrollment: any, index: number) => (
+                    <div key={enrollment.id} className="animate-fade-in" style={{ animationDelay: `${index * 150}ms` }}>
+                      <CourseCard 
+                        course={enrollment.course} 
+                        enrollment={enrollment}
+                        compact={true}
+                      />
+                    </div>
                   ))}
                   {typedEnrollments.length === 0 && (
-                    <p className="text-medium-contrast text-center py-8">No enrolled courses yet</p>
+                    <p className="text-medium-contrast text-center py-8 animate-pulse-gentle">No enrolled courses yet</p>
                   )}
                 </div>
               </div>
 
               {/* Upcoming Sessions */}
-              <div className="card-content rounded-xl shadow-sm p-6">
+              <div className="card-content rounded-xl shadow-sm p-6 animate-card animate-slide-up" style={{ animationDelay: '100ms' }}>
                 <h3 className="text-lg font-semibold text-high-contrast mb-4">Upcoming Live Sessions</h3>
                 <div className="space-y-4">
-                  {typedLiveSessions.slice(0, 2).map((session: any) => (
-                    <LiveSessionCard 
-                      key={session.id} 
-                      session={session}
-                      compact={true}
-                    />
+                  {typedLiveSessions.slice(0, 2).map((session: any, index: number) => (
+                    <div key={session.id} className="animate-fade-in" style={{ animationDelay: `${index * 150 + 200}ms` }}>
+                      <LiveSessionCard 
+                        session={session}
+                        compact={true}
+                      />
+                    </div>
                   ))}
                   {typedLiveSessions.length === 0 && (
-                    <p className="text-medium-contrast text-center py-8">No upcoming sessions</p>
+                    <p className="text-medium-contrast text-center py-8 animate-pulse-gentle">No upcoming sessions</p>
                   )}
                 </div>
               </div>

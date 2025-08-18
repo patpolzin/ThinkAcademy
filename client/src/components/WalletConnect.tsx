@@ -10,14 +10,14 @@ export default function WalletConnect() {
 
   if (isConnected && address) {
     return (
-      <div className="flex items-center space-x-3 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 px-4 py-2 rounded-lg">
-        <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
+      <div className="flex items-center space-x-3 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 px-4 py-2 rounded-lg animate-card">
+        <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse-gentle"></div>
         <span className="font-medium">
           {address.slice(0, 6)}...{address.slice(-4)}
         </span>
         <button
           onClick={disconnectWallet}
-          className="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-200"
+          className="text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-200 animate-button-subtle"
           data-testid="button-disconnect-wallet"
         >
           <X className="w-4 h-4" />
@@ -30,7 +30,7 @@ export default function WalletConnect() {
     <>
       <Button
         onClick={() => setShowAuthModal(true)}
-        className="flex items-center space-x-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white"
+        className="flex items-center space-x-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white animate-button animate-glow ripple-effect"
         data-testid="button-login"
       >
         <LogIn className="w-4 h-4" />

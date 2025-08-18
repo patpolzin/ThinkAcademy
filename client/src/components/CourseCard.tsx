@@ -70,11 +70,11 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
 
   if (compact) {
     return (
-      <div className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg">
+      <div className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg animate-card">
         <img 
           src={course.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=80&h=80&fit=crop'} 
           alt={course.title}
-          className="w-16 h-16 rounded-lg object-cover"
+          className="w-16 h-16 rounded-lg object-cover transition-transform duration-200 hover:scale-105"
         />
         <div className="flex-1">
           <h4 className="font-medium text-slate-900">{course.title}</h4>
@@ -88,7 +88,7 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
             </div>
           )}
         </div>
-        <Button size="sm" data-testid={`button-continue-${course.id}`}>
+        <Button size="sm" className="animate-button-subtle" data-testid={`button-continue-${course.id}`}>
           {enrollment ? 'Continue' : 'Start'}
         </Button>
       </div>
@@ -96,12 +96,12 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-card animate-fade-in">
       <div className="relative">
         <img 
           src={course.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=200&fit=crop'} 
           alt={course.title}
-          className="w-full h-48 object-cover"
+          className="w-full h-48 object-cover transition-transform duration-300 hover:scale-110"
         />
         {!canAccess && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">

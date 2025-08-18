@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Video, LayoutDashboard, Settings, Users } from 'lucide-react';
+import { BookOpen, Video, LayoutDashboard, Settings, Users, TestTube } from 'lucide-react';
 import { useWallet } from './WalletProvider';
 import { useQuery } from "@tanstack/react-query";
 
@@ -21,6 +21,7 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'live', label: 'Live Sessions', icon: Video },
+    { id: 'test', label: 'Course Test', icon: TestTube },
     ...(userData?.isInstructor ? [{ id: 'instructor', label: 'Instructor', icon: Users }] : []),
     ...(userData?.isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
   ];
@@ -37,7 +38,7 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors nav-tab ${
+              className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm nav-tab animate-nav-tab ${
                 activeTab === item.id ? 'active' : ''
               } ${
                 activeTab === item.id

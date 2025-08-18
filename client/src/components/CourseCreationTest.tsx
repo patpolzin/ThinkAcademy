@@ -365,7 +365,7 @@ export function CourseCreationTest() {
             <Button 
               onClick={() => setStep(2)} 
               disabled={!course.title || !course.description}
-              className="btn-primary"
+              className="btn-primary animate-button animate-glow ripple-effect"
             >
               Continue Manual Setup
             </Button>
@@ -375,8 +375,8 @@ export function CourseCreationTest() {
 
       <div className="text-center">
         <div className="text-slate-600 dark:text-slate-400 mb-4">Or</div>
-        <Button onClick={fillSampleData} className="btn-secondary">
-          <BookOpen className="w-4 h-4 mr-2" />
+        <Button onClick={fillSampleData} className="btn-secondary animate-button-subtle animate-glow">
+          <BookOpen className="w-4 h-4 mr-2 animate-rotate" />
           Use Sample Blockchain Course Data
         </Button>
       </div>
@@ -387,9 +387,9 @@ export function CourseCreationTest() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">Course Content Review</h2>
-        <Button onClick={createFullCourse} disabled={isCreating} className="btn-primary">
+        <Button onClick={createFullCourse} disabled={isCreating} className="btn-primary animate-button animate-glow ripple-effect">
           {isCreating ? 'Creating...' : 'Create Complete Course'}
-          <Save className="w-4 h-4 ml-2" />
+          <Save className={`w-4 h-4 ml-2 ${isCreating ? 'animate-spin-slow' : ''}`} />
         </Button>
       </div>
 
@@ -420,10 +420,10 @@ export function CourseCreationTest() {
         <TabsContent value="lessons" className="tab-content mt-6">
           <div className="space-y-4">
             {course.lessons.map((lesson, index) => (
-              <Card key={index} className="card-content">
+              <Card key={index} className="card-content animate-card animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
-                    <div className="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900 flex items-center justify-center animate-bounce-subtle">
                       <Video className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                     </div>
                     <div className="flex-1">
@@ -548,7 +548,7 @@ export function CourseCreationTest() {
         </CardContent>
       </Card>
       <div className="flex gap-3 justify-center">
-        <Button onClick={() => window.location.href = `/course/${createdCourseId}`} className="btn-primary">
+        <Button onClick={() => window.location.href = `/course/${createdCourseId}`} className="btn-primary animate-button animate-glow ripple-effect">
           <Eye className="w-4 h-4 mr-2" />
           View Course
         </Button>
@@ -565,7 +565,7 @@ export function CourseCreationTest() {
             resources: []
           });
           setCreatedCourseId('');
-        }} className="btn-secondary">
+        }} className="btn-secondary animate-button-subtle">
           Create Another Course
         </Button>
       </div>
