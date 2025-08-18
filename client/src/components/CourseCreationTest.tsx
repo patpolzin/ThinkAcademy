@@ -253,10 +253,7 @@ export function CourseCreationTest() {
       for (const lesson of course.lessons) {
         await createLessonMutation.mutateAsync({
           courseId,
-          lesson: {
-            ...lesson,
-            isPublished: true
-          }
+          lesson
         });
       }
 
@@ -264,10 +261,7 @@ export function CourseCreationTest() {
       for (const quiz of course.quizzes) {
         await createQuizMutation.mutateAsync({
           courseId,
-          quiz: {
-            ...quiz,
-            isPublished: true
-          }
+          quiz
         });
       }
 
@@ -275,10 +269,7 @@ export function CourseCreationTest() {
       for (const resource of course.resources) {
         await createResourceMutation.mutateAsync({
           courseId,
-          resource: {
-            ...resource,
-            uploadedBy: 'test-instructor'
-          }
+          resource
         });
       }
 
