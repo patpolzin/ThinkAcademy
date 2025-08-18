@@ -101,10 +101,50 @@ export class DirectStorage {
     }
   }
 
+  async createUser(userData: any) {
+    const sql = createDbConnection();
+    try {
+      // First check what columns exist in the users table
+      const result = await sql`
+        INSERT INTO users (wallet_address, email, display_name, is_admin, is_instructor) 
+        VALUES (
+          ${userData.walletAddress?.toLowerCase()}, 
+          ${userData.email || null}, 
+          ${userData.displayName || userData.walletAddress?.slice(-8) || 'User'}, 
+          ${userData.isAdmin || false}, 
+          ${userData.isInstructor || false}
+        ) RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error creating user:', error);
+      throw error;
+    }
+  }
+
+  async updateUserTokens(userId: string, tokenBalances: any) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`
+        UPDATE users 
+        SET token_balances = ${JSON.stringify(tokenBalances)}, updated_at = NOW()
+        WHERE id = ${userId}
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error updating user tokens:', error);
+      throw error;
+    }
+  }
+
   async getLiveSessions() {
     const sql = createDbConnection();
     try {
-      const result = await sql`SELECT * FROM live_sessions ORDER BY scheduled_for ASC`;
+      // Fix column name - it's scheduled_at not scheduled_for
+      const result = await sql`SELECT * FROM live_sessions ORDER BY scheduled_at ASC`;
       await sql.end();
       return result;
     } catch (error) {
@@ -113,14 +153,60 @@ export class DirectStorage {
     }
   }
 
-  async getUserEnrollments(userId: string) {
+  async getUserEnrollments(walletAddress: string) {
     const sql = createDbConnection();
     try {
+      // First get the user ID from wallet address
+      const userResult = await sql`SELECT id FROM users WHERE wallet_address = ${walletAddress.toLowerCase()}`;
+      if (userResult.length === 0) {
+        await sql.end();
+        return [];
+      }
+      
+      const userId = userResult[0].id;
       const result = await sql`SELECT * FROM enrollments WHERE user_id = ${userId}`;
       await sql.end();
       return result;
     } catch (error) {
       console.error('Database error getting enrollments:', error);
+      throw error;
+    }
+  }
+
+  async createEnrollment(enrollmentData: any) {
+    const sql = createDbConnection();
+    try {
+      // Convert wallet address to user ID if needed
+      let userId = enrollmentData.userId;
+      if (typeof userId === 'string' && userId.startsWith('0x')) {
+        const userResult = await sql`SELECT id FROM users WHERE wallet_address = ${userId.toLowerCase()}`;
+        if (userResult.length === 0) {
+          throw new Error('User not found');
+        }
+        userId = userResult[0].id;
+      }
+      
+      const result = await sql`
+        INSERT INTO enrollments (user_id, course_id, progress_percentage)
+        VALUES (${userId}, ${enrollmentData.courseId}, ${enrollmentData.progress || 0})
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error creating enrollment:', error);
+      throw error;
+    }
+  }
+
+  async checkEnrollment(userId: string, courseId: string) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`SELECT * FROM enrollments WHERE user_id = ${userId} AND course_id = ${courseId}`;
+      await sql.end();
+      return result.length > 0;
+    } catch (error) {
+      console.error('Database error checking enrollment:', error);
       throw error;
     }
   }

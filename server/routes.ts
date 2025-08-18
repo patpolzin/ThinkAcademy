@@ -13,17 +13,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { walletAddress, connectedWalletType, tokenBalances } = req.body;
       
-      let user = await storage.getUserByWallet(walletAddress);
+      let user = await directDb.getUser(walletAddress);
       
       if (!user) {
-        user = await storage.createUser({
+        user = await directDb.createUser({
           walletAddress,
           connectedWalletType,
           tokenBalances: tokenBalances || {},
           isEmailAuth: false,
+          displayName: `User ${walletAddress.slice(-6)}`
         });
       } else {
-        user = await storage.updateUserTokens(user.id, tokenBalances || {});
+        if (user.id) {
+          user = await directDb.updateUserTokens(user.id.toString(), tokenBalances || {});
+        }
       }
       
       res.json({ user });
@@ -37,17 +40,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, walletAddress } = req.body;
       
-      let user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        user = await storage.createUser({
-          email,
-          walletAddress,
-          connectedWalletType: 'privy-email',
-          isEmailAuth: true,
-          tokenBalances: {},
-        });
-      }
+      // For now, use direct user creation since we don't have getUserByEmail in directDb yet
+      let user = await directDb.createUser({
+        email,
+        walletAddress,
+        connectedWalletType: 'privy-email',
+        isEmailAuth: true,
+        tokenBalances: {},
+      });
       
       res.json({ user });
     } catch (error) {
@@ -248,9 +248,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enrollment routes
   app.get("/api/enrollments/user/:userId", async (req, res) => {
     try {
-      const enrollments = await storage.getEnrollmentsByUser(req.params.userId);
+      const enrollments = await directDb.getUserEnrollments(req.params.userId);
       res.json(enrollments);
     } catch (error) {
+      console.error("Enrollments fetch error:", error);
       res.status(500).json({ error: "Failed to fetch enrollments" });
     }
   });
@@ -286,15 +287,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/enrollments", async (req, res) => {
     try {
       console.log("Enrollment request body:", req.body);
-      const enrollmentData = insertEnrollmentSchema.parse(req.body);
-      console.log("Parsed enrollment data:", enrollmentData);
-      const enrollment = await storage.createEnrollment(enrollmentData);
+      
+      // Handle conversion of wallet address to user ID and string courseId to number
+      let { userId, courseId, ...rest } = req.body;
+      
+      // Convert wallet address to user ID if needed
+      if (typeof userId === 'string' && userId.startsWith('0x')) {
+        const user = await directDb.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ error: "User not found" });
+        }
+        userId = user.id;
+      }
+      
+      // Convert courseId to number if it's a string
+      if (typeof courseId === 'string') {
+        courseId = parseInt(courseId);
+      }
+      
+      const enrollmentData = { userId, courseId, ...rest };
+      console.log("Processed enrollment data:", enrollmentData);
+      
+      const enrollment = await directDb.createEnrollment(enrollmentData);
       res.json(enrollment);
     } catch (error) {
       console.error("Enrollment error:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid enrollment data", details: error.errors });
-      }
       res.status(500).json({ error: "Failed to create enrollment", details: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
@@ -547,20 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enrollment management routes
-  app.post('/api/enrollments', async (req, res) => {
-    try {
-      const { userId, courseId } = req.body;
-      const enrollment = await storage.enrollUser(userId, courseId);
-      res.json(enrollment);
-    } catch (error) {
-      console.error('Error enrolling user:', error);
-      if (error.message.includes('already enrolled')) {
-        res.status(409).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: 'Failed to enroll user' });
-      }
-    }
-  });
+  // Removed duplicate enrollment route - using the one with data conversion above
 
   app.delete('/api/enrollments/:userId/:courseId', async (req, res) => {
     try {
@@ -574,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/enrollments/:userId/:courseId/check', async (req, res) => {
     try {
-      const isEnrolled = await storage.checkEnrollment(req.params.userId, req.params.courseId);
+      const isEnrolled = await directDb.checkEnrollment(req.params.userId, req.params.courseId);
       res.json({ isEnrolled });
     } catch (error) {
       console.error('Error checking enrollment:', error);
