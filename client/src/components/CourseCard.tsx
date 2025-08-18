@@ -1,5 +1,6 @@
 import { Clock, Users, Award, Unlock, Lock } from 'lucide-react';
 import { Button } from './ui/button';
+import { useLocation } from 'wouter';
 
 interface Course {
   id: string;
@@ -20,8 +21,9 @@ interface Course {
 
 interface Enrollment {
   id: string;
-  progress: number;
-  isCompleted: boolean;
+  progress?: number;
+  progress_percentage?: number;
+  isCompleted?: boolean;
 }
 
 interface CourseCardProps {
@@ -32,6 +34,8 @@ interface CourseCardProps {
 }
 
 export default function CourseCard({ course, enrollment, compact = false, onEnroll }: CourseCardProps) {
+  const [, setLocation] = useLocation();
+  
   // Early return if course is undefined/null
   if (!course) {
     return (
@@ -47,6 +51,10 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
   const instructor = course.instructor || course.instructorName || 'Unknown Instructor';
   const duration = course.duration || 10; // Default 10 hours
   const studentCount = course.studentCount || 0;
+
+  const handleCourseClick = () => {
+    setLocation(`/course/${course.id}`);
+  };
 
   const getTokenRequirementDisplay = () => {
     // Handle case where tokenRequirement might be a string (from database) or undefined
@@ -90,7 +98,10 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
 
   if (compact) {
     return (
-      <div className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg animate-card">
+      <div 
+        className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg animate-card cursor-pointer hover:bg-slate-100 transition-colors"
+        onClick={handleCourseClick}
+      >
         <img 
           src={course.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=80&h=80&fit=crop'} 
           alt={course.title}
@@ -103,12 +114,20 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
             <div className="w-full bg-slate-200 rounded-full h-2 mt-2">
               <div 
                 className="bg-cyan-500 h-2 rounded-full transition-all"
-                style={{ width: `${enrollment.progress}%` }}
+                style={{ width: `${enrollment.progress_percentage || 0}%` }}
               ></div>
             </div>
           )}
         </div>
-        <Button size="sm" className="animate-button-subtle" data-testid={`button-continue-${course.id}`}>
+        <Button 
+          size="sm" 
+          className="animate-button-subtle" 
+          data-testid={`button-continue-${course.id}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCourseClick();
+          }}
+        >
           {enrollment ? 'Continue' : 'Start'}
         </Button>
       </div>
@@ -116,7 +135,10 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-card animate-fade-in">
+    <div 
+      className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-card animate-fade-in cursor-pointer hover:shadow-md transition-shadow"
+      onClick={handleCourseClick}
+    >
       <div className="relative">
         <img 
           src={course.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=200&fit=crop'} 
@@ -156,7 +178,14 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
           <p className="text-sm text-slate-600">by {instructor}</p>
           <Button 
             disabled={!canAccess}
-            onClick={() => enrollment ? null : onEnroll?.(course)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (enrollment) {
+                handleCourseClick();
+              } else {
+                onEnroll?.(course);
+              }
+            }}
             data-testid={`button-enroll-${course.id}`}
           >
             {enrollment ? 'Continue' : canAccess ? 'Enroll' : 'Locked'}

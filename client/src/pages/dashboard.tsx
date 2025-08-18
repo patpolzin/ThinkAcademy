@@ -14,6 +14,7 @@ import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard, U
 import AdminPanel from "@/components/AdminPanel";
 import InstructorPanel from "@/components/InstructorPanel";
 import { CourseCreationTest } from "@/components/CourseCreationTest";
+import { GameifiedProgress, calculateUserStats, generateMockAchievements } from "@/components/GameifiedProgress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +62,10 @@ export default function Dashboard() {
   const typedCourses = courses as any[];
   const typedLiveSessions = liveSessions as any[];
   const typedEnrollments = enrollments as any[];
+
+  // Calculate gamified stats
+  const userStats = calculateUserStats(typedEnrollments);
+  const achievements = generateMockAchievements(userStats);
 
   const { data: analytics } = useQuery({
     queryKey: ['/api/analytics'],
@@ -175,6 +180,13 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+
+            {/* Gamified Progress Section */}
+            <GameifiedProgress 
+              userStats={userStats}
+              achievements={achievements}
+              className="mb-8"
+            />
 
             {/* Current Courses and Live Sessions */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

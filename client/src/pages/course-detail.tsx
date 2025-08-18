@@ -49,7 +49,7 @@ export default function CourseDetailPage() {
   return (
     <StudentCourseView 
       course={course} 
-      userId={user?.id || ''} 
+      userId={user?.id?.toString() || ''} 
       enrollment={enrollment?.isEnrolled ? enrollment : undefined}
     />
   );

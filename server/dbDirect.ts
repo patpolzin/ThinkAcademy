@@ -210,4 +210,33 @@ export class DirectStorage {
       throw error;
     }
   }
+
+  async getCourse(courseId: number) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`SELECT * FROM courses WHERE id = ${courseId}`;
+      await sql.end();
+      if (result.length === 0) {
+        return null;
+      }
+      
+      // Transform the result to match the expected format
+      const course = result[0];
+      return {
+        ...course,
+        tokenRequirement: typeof course.token_requirement === 'string' 
+          ? JSON.parse(course.token_requirement) 
+          : course.token_requirement,
+        instructorName: course.instructor_name,
+        isActive: course.is_active,
+        lessonCount: course.lesson_count,
+        assignmentCount: course.assignment_count,
+        createdAt: course.created_at,
+        updatedAt: course.updated_at
+      };
+    } catch (error) {
+      console.error('Database error getting course:', error);
+      throw error;
+    }
+  }
 }

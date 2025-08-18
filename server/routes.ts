@@ -202,12 +202,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/courses/:id", async (req, res) => {
     try {
-      const course = await storage.getCourse(req.params.id);
+      const course = await directDb.getCourse(parseInt(req.params.id));
       if (!course) {
         return res.status(404).json({ error: "Course not found" });
       }
       res.json(course);
     } catch (error) {
+      console.error("Course detail fetch error:", error);
       res.status(500).json({ error: "Failed to fetch course" });
     }
   });
