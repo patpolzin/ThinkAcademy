@@ -8,13 +8,30 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Use postgres-js for Supabase with pooled connection
-// The DATABASE_URL should use port 6543 for pooled connections
+// Parse DATABASE_URL safely to handle special characters in password
+function parseSupabaseUrl(url: string) {
+  // Extract components manually to handle special characters
+  const match = url.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+  if (!match) {
+    throw new Error('Invalid DATABASE_URL format');
+  }
+  
+  const [, username, password, host, port, database] = match;
+  
+  return {
+    host,
+    port: parseInt(port),
+    database,
+    username,
+    password: decodeURIComponent(password), // Decode any URL-encoded characters
+    ssl: 'require',
+    max: 1,
+    idle_timeout: 20,
+    connect_timeout: 60,
+  };
+}
+
 const connectionString = process.env.DATABASE_URL;
-const client = postgres(connectionString, {
-  ssl: 'require',
-  max: 1,
-  idle_timeout: 20,
-  connect_timeout: 60,
-});
+const connectionConfig = parseSupabaseUrl(connectionString);
+const client = postgres(connectionConfig);
 export const db = drizzle(client, { schema });

@@ -1,27 +1,35 @@
 import postgres from "postgres";
 
-// Working Supabase connection configuration
-const connectionConfig = {
-  host: 'aws-0-us-west-1.pooler.supabase.com',
-  port: 6543,
-  database: 'postgres',
-  username: 'postgres.rllawlhkzzcxmwdrmdku',
-  password: 'OgSdWlCclGhWfZ3T',
-  ssl: true,
-};
-
-export function createDbConnection() {
-  return postgres({
-    host: connectionConfig.host,
-    port: connectionConfig.port,
-    database: connectionConfig.database,
-    username: connectionConfig.username,
-    password: connectionConfig.password,
+// Parse DATABASE_URL safely to handle special characters in password
+function parseSupabaseUrl(url: string) {
+  const match = url.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+  if (!match) {
+    throw new Error('Invalid DATABASE_URL format');
+  }
+  
+  const [, username, password, host, port, database] = match;
+  
+  return {
+    host,
+    port: parseInt(port),
+    database,
+    username,
+    password: decodeURIComponent(password), // Decode any URL-encoded characters
     ssl: 'require',
     max: 1,
     idle_timeout: 20,
     connect_timeout: 10,
-  });
+  };
+}
+
+export function createDbConnection() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL not set');
+  }
+  
+  const connectionConfig = parseSupabaseUrl(connectionString);
+  return postgres(connectionConfig);
 }
 
 // Direct database operations that work
