@@ -346,12 +346,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get instructors endpoint
+  // Get instructors endpoint  
   app.get("/api/users/instructors", async (req, res) => {
     try {
-      const users = await directDb.getAllUsers();
-      const instructors = users.filter(u => u.is_instructor);
-      res.json(instructors.map(u => ({ id: u.id, displayName: u.display_name, email: u.email })));
+      const instructors = await directDb.getInstructors();
+      res.json(instructors);
     } catch (error) {
       console.error("Instructors fetch error:", error);
       res.status(500).json({ error: "Failed to fetch instructors" });

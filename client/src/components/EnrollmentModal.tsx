@@ -23,7 +23,7 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
       console.log("Starting enrollment process for:", address, course.id);
       
       // Use wallet address directly - the backend will handle user creation
-      const response = await apiRequest('/api/enrollments', {
+      const data = await apiRequest('/api/enrollments', {
         method: 'POST',
         body: JSON.stringify({
           userId: address, // Send wallet address, backend will handle conversion
@@ -34,23 +34,13 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
         })
       });
       
-      if (!response.ok) {
-        const text = await response.text();
-        let errorData;
-        try {
-          errorData = JSON.parse(text);
-        } catch {
-          errorData = { error: text || response.statusText };
-        }
-        throw new Error(errorData.error || 'Failed to enroll');
-      }
-      
-      return response.json();
+      return data;
     },
     onSuccess: () => {
       toast({ title: "Successfully enrolled in course!" });
       queryClient.invalidateQueries({ queryKey: ['/api/enrollments'] });
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/analytics'] });
       onClose();
     },
     onError: (error) => {

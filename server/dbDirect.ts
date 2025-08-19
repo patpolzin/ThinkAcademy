@@ -275,7 +275,7 @@ export class DirectStorage {
     const sql = createDbConnection();
     try {
       const result = await sql`
-        SELECT id, display_name, email, wallet_address 
+        SELECT id, display_name as "displayName", email, wallet_address as "walletAddress"
         FROM users 
         WHERE is_instructor = true OR is_admin = true
         ORDER BY display_name
