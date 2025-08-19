@@ -294,9 +294,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Convert wallet address to user ID if needed
       if (typeof userId === 'string' && userId.startsWith('0x')) {
-        const user = await directDb.getUser(userId);
+        let user = await directDb.getUser(userId);
         if (!user) {
-          return res.status(404).json({ error: "User not found" });
+          // Create user if they don't exist
+          console.log(`Creating new user for wallet: ${userId}`);
+          user = await directDb.createUser({
+            walletAddress: userId.toLowerCase(),
+            displayName: `User ${userId.slice(-6)}`,
+            email: `${userId.slice(-6)}@example.com`
+          });
         }
         userId = user.id;
       }
