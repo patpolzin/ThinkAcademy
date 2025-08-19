@@ -72,6 +72,8 @@ export const reminders = pgTable("reminders", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+
+
 export const liveSessions = pgTable("live_sessions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 255 }).notNull(),

@@ -80,6 +80,64 @@ export class DirectStorage {
     }
   }
 
+  async getCourseContent(courseId: number, contentType: 'lessons' | 'quizzes' | 'resources' | 'forums') {
+    const sql = createDbConnection();
+    try {
+      let result;
+      switch (contentType) {
+        case 'lessons':
+          result = await sql`
+            SELECT * FROM lessons 
+            WHERE course_id = ${courseId} 
+            ORDER BY order_index ASC, created_at ASC
+          `;
+          break;
+        case 'quizzes':
+          result = await sql`
+            SELECT * FROM quizzes 
+            WHERE course_id = ${courseId} 
+            ORDER BY order_index ASC, created_at ASC
+          `;
+          break;
+        case 'resources':
+          result = await sql`
+            SELECT * FROM resources 
+            WHERE course_id = ${courseId} 
+            ORDER BY created_at ASC
+          `;
+          break;
+        case 'forums':
+          result = await sql`
+            SELECT f.*, u.display_name as user_display_name
+            FROM forums f
+            LEFT JOIN users u ON f.user_id::text = u.id::text
+            WHERE f.course_id::text = ${courseId.toString()}
+            ORDER BY f.created_at DESC
+          `;
+          break;
+        default:
+          result = [];
+      }
+      await sql.end();
+      return result;
+    } catch (error) {
+      console.error(`Database error getting ${contentType}:`, error);
+      return []; // Return empty array instead of throwing
+    }
+  }
+
+  async deleteEnrollment(enrollmentId: number) {
+    const sql = createDbConnection();
+    try {
+      await sql`DELETE FROM enrollments WHERE id = ${enrollmentId}`;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error creating course:', error);
+      throw error;
+    }
+  }
+
   async getAnalytics() {
     const sql = createDbConnection();
     try {

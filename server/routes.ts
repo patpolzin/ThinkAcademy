@@ -415,12 +415,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Forum routes
+  // Forum routes - Updated to use directDb
   app.get("/api/forums/course/:courseId", async (req, res) => {
     try {
-      const posts = await storage.getForumPostsByCourse(req.params.courseId);
+      const posts = await directDb.getCourseContent(parseInt(req.params.courseId), 'forums');
       res.json(posts);
     } catch (error) {
+      console.error("Forum posts fetch error:", error);
       res.status(500).json({ error: "Failed to fetch forum posts" });
     }
   });
@@ -501,14 +502,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Lesson routes
+  // Course content routes - Updated to use directDb
   app.get('/api/courses/:courseId/lessons', async (req, res) => {
     try {
-      const lessons = await storage.getLessons(req.params.courseId);
+      const lessons = await directDb.getCourseContent(parseInt(req.params.courseId), 'lessons');
       res.json(lessons);
     } catch (error) {
       console.error('Error fetching lessons:', error);
       res.status(500).json({ error: 'Failed to fetch lessons' });
+    }
+  });
+
+  app.get('/api/courses/:courseId/quizzes', async (req, res) => {
+    try {
+      const quizzes = await directDb.getCourseContent(parseInt(req.params.courseId), 'quizzes');
+      res.json(quizzes);
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      res.status(500).json({ error: 'Failed to fetch quizzes' });
+    }
+  });
+
+  app.get('/api/courses/:courseId/resources', async (req, res) => {
+    try {
+      const resources = await directDb.getCourseContent(parseInt(req.params.courseId), 'resources');
+      res.json(resources);
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+      res.status(500).json({ error: 'Failed to fetch resources' });
     }
   });
 
@@ -619,6 +640,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enrollment management routes
   // Removed duplicate enrollment route - using the one with data conversion above
+
+  // Unenroll endpoint
+  app.delete('/api/enrollments/:id', async (req, res) => {
+    try {
+      await directDb.deleteEnrollment(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Unenroll error:", error);
+      res.status(500).json({ error: "Failed to unenroll from course" });
+    }
+  });
 
   app.delete('/api/enrollments/:userId/:courseId', async (req, res) => {
     try {
