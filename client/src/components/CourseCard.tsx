@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, Users, Award, Unlock, Lock } from 'lucide-react';
 import { Button } from './ui/button';
 import { useLocation } from 'wouter';
@@ -241,13 +242,14 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         )}
       </div>
 
-      {/* Enrollment Modal */}
-      {showEnrollmentModal && (
+      {/* Enrollment Modal - Rendered as Portal */}
+      {showEnrollmentModal && createPortal(
         <EnrollmentModal
           course={course}
           isOpen={showEnrollmentModal}
           onClose={() => setShowEnrollmentModal(false)}
-        />
+        />,
+        document.body
       )}
     </div>
   );
