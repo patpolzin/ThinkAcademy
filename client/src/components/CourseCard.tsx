@@ -108,7 +108,11 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         <img 
           src={course.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=80&h=80&fit=crop'} 
           alt={course.title}
-          className="w-16 h-16 rounded-lg object-cover transition-transform duration-200 hover:scale-105"
+          className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="8" fill="%23f1f5f9"/%3E%3Ctext x="32" y="32" text-anchor="middle" dy="0.3em" font-family="Arial" font-size="10" fill="%2364748b"%3ECourse%3C/text%3E%3C/svg%3E';
+          }}
         />
         <div className="flex-1">
           <h4 className="font-medium text-slate-900">{course.title}</h4>
@@ -151,7 +155,11 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         <img 
           src={course.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=200&fit=crop'} 
           alt={course.title}
-          className="w-full h-48 object-cover transition-transform duration-300 hover:scale-110"
+          className="w-full h-48 object-cover"
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23f1f5f9"/%3E%3Ctext x="200" y="100" text-anchor="middle" dy="0.3em" font-family="Arial" font-size="16" fill="%2364748b"%3ECourse Image%3C/text%3E%3C/svg%3E';
+          }}
         />
         {!canAccess && (
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">

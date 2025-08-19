@@ -21,18 +21,21 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
   const enrollMutation = useMutation({
     mutationFn: async () => {
       // First get the user's database ID from their wallet address
-      const userResponse = await apiRequest(`/api/users/${address}`, 'GET');
+      const userResponse = await apiRequest(`/api/users/${address}`);
       if (!userResponse.ok) {
         throw new Error('Failed to fetch user data');
       }
       const userData = await userResponse.json();
       
-      return apiRequest('/api/enrollments', 'POST', {
-        userId: userData.id, // Use database ID, not wallet address
-        courseId: course.id,
-        progress: 0,
-        totalLessons: course.totalLessons || 10,
-        totalAssignments: course.totalAssignments || 3
+      return apiRequest('/api/enrollments', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId: userData.id, // Use database ID, not wallet address
+          courseId: course.id,
+          progress: 0,
+          totalLessons: course.totalLessons || 10,
+          totalAssignments: course.totalAssignments || 3
+        })
       });
     },
     onSuccess: () => {
@@ -100,8 +103,16 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
   if (!isOpen || !course) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 relative">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-xl p-8 max-w-md w-full mx-4 relative shadow-2xl transform transition-all duration-200 ease-out scale-100 animate-fadeIn"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:text-gray-400 dark:hover:text-gray-200"

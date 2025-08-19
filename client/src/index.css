@@ -142,6 +142,22 @@
     @apply bg-white text-slate-900 border-slate-400 dark:bg-slate-900 dark:text-slate-50 dark:border-slate-500;
     @apply focus:border-slate-600 dark:focus:border-slate-400 focus:ring-2 focus:ring-slate-500;
   }
+
+  /* Modal animations */
+  @keyframes fadeIn {
+    from { 
+      opacity: 0; 
+      transform: translateY(-20px) scale(0.95); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0) scale(1); 
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+  }
   
   /* Link contrast */
   .link-primary {
