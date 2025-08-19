@@ -10,10 +10,15 @@ if (!process.env.DATABASE_URL) {
 
 // Parse DATABASE_URL safely to handle special characters in password
 function parseSupabaseUrl(url: string) {
+  // Check if it's a valid postgresql:// URL
+  if (!url.startsWith('postgresql://')) {
+    throw new Error(`Invalid DATABASE_URL format. Expected postgresql://... but got: ${url.substring(0, 50)}...`);
+  }
+  
   // Extract components manually to handle special characters
   const match = url.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
   if (!match) {
-    throw new Error('Invalid DATABASE_URL format');
+    throw new Error(`Cannot parse DATABASE_URL. Format should be: postgresql://user:pass@host:port/db`);
   }
   
   const [, username, password, host, port, database] = match;
