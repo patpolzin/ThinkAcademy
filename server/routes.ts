@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAdmin: true
         });
       } else {
-        user = await storage.makeUserAdmin(user.id);
+        user = await storage.makeUserAdmin(user.id.toString());
       }
       res.json(user);
     } catch (error) {
@@ -180,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isInstructor: true
         });
       } else {
-        user = await storage.makeUserInstructor(user.id);
+        user = await storage.makeUserInstructor(user.id.toString());
       }
       res.json(user);
     } catch (error) {
@@ -338,7 +338,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get instructors endpoint
   app.get("/api/users/instructors", async (req, res) => {
     try {
-      const instructors = await directDb.getUsers({ isInstructor: true });
+      const users = await directDb.getAllUsers();
+      const instructors = users.filter(u => u.is_instructor);
       res.json(instructors.map(u => ({ id: u.id, displayName: u.display_name, email: u.email })));
     } catch (error) {
       console.error("Instructors fetch error:", error);
@@ -440,20 +441,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (user && session) {
           const reminderTimeMs = new Date(reminderData.reminderTime).getTime();
-          const sessionTimeMs = new Date(session.scheduledTime).getTime();
+          const sessionTimeMs = new Date(session.scheduledAt).getTime();
           const minutesBefore = Math.round((sessionTimeMs - reminderTimeMs) / 60000);
 
           const webhookData = {
             type: 'reminder_created',
             userId: reminderData.userId,
-            userEmail: user.contactEmail || user.email,
-            userPhone: user.contactPhone,
-            preferredContactMethod: user.preferredContactMethod || 'email',
+            userEmail: user.email,
+            userPhone: user.email, // Use email as fallback since contactPhone doesn't exist
+            preferredContactMethod: 'email',
             sessionTitle: session.title,
-            sessionTime: session.scheduledTime,
+            sessionTime: session.scheduledAt,
             reminderTime: reminderData.reminderTime,
             minutesBefore: minutesBefore,
-            message: `Reminder: "${session.title}" starts in ${minutesBefore} minutes at ${new Date(session.scheduledTime).toLocaleString()}`
+            message: `Reminder: "${session.title}" starts in ${minutesBefore} minutes at ${new Date(session.scheduledAt).toLocaleString()}`
           };
 
           // Send to Make.com webhook - add MAKE_WEBHOOK_URL to your environment variables

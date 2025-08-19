@@ -20,31 +20,40 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
 
   const enrollMutation = useMutation({
     mutationFn: async () => {
-      // First get the user's database ID from their wallet address
-      const userResponse = await apiRequest(`/api/users/${address}`);
-      if (!userResponse.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-      const userData = await userResponse.json();
+      console.log("Starting enrollment process for:", address, course.id);
       
-      return apiRequest('/api/enrollments', {
+      // Use wallet address directly - the backend will handle user creation
+      const response = await apiRequest('/api/enrollments', {
         method: 'POST',
         body: JSON.stringify({
-          userId: userData.id, // Use database ID, not wallet address
+          userId: address, // Send wallet address, backend will handle conversion
           courseId: course.id,
           progress: 0,
           totalLessons: course.totalLessons || 10,
           totalAssignments: course.totalAssignments || 3
         })
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to enroll');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({ title: "Successfully enrolled in course!" });
       queryClient.invalidateQueries({ queryKey: ['/api/enrollments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       onClose();
     },
-    onError: () => {
-      toast({ title: "Failed to enroll in course", variant: "destructive" });
+    onError: (error) => {
+      console.error("Enrollment error:", error);
+      toast({ 
+        title: "Failed to enroll in course", 
+        description: error.message || "Please try again",
+        variant: "destructive" 
+      });
     }
   });
 
