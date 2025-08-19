@@ -49,31 +49,51 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
   });
 
   const checkTokenAccess = () => {
-    if (!course?.tokenRequirement || course.tokenRequirement.type === 'NONE') {
-      return { hasAccess: true, reason: 'Free access' };
+    // Handle case where tokenRequirement might be a string (from database) or undefined
+    const tokenReq = typeof course?.tokenRequirement === 'string' 
+      ? JSON.parse(course.tokenRequirement) 
+      : course?.tokenRequirement || { type: 'NONE' };
+
+    if (!tokenReq || tokenReq.type === 'NONE') {
+      return { hasAccess: true, reason: 'Free access - no tokens required' };
     }
 
-    const { type, minAmount, tokenName } = course.tokenRequirement;
+    const { type, amount, think, nft, minAmount, tokenName, contractAddress } = tokenReq;
     
-    if (type === 'ERC20') {
-      const userBalance = parseFloat(tokenBalances[tokenName] || '0');
-      const required = parseFloat(minAmount || '0');
+    if (type === 'THINK' || type === 'ERC20') {
+      const userBalance = parseFloat(tokenBalances['THINK'] || '0');
+      const required = parseFloat(amount || minAmount || '0');
       return {
         hasAccess: userBalance >= required,
         reason: userBalance >= required 
-          ? `You have ${userBalance} ${tokenName} tokens` 
-          : `Need ${required} ${tokenName} tokens (you have ${userBalance})`
+          ? `You have ${userBalance} THINK tokens (need ${required})` 
+          : `Need ${required} THINK tokens (you have ${userBalance})`
       };
     }
     
     if (type === 'NFT') {
-      const userNFTs = parseInt(tokenBalances[tokenName] || '0');
-      const required = parseInt(minAmount || '1');
+      const userNFTs = parseInt(tokenBalances['NFT'] || '0');
+      const required = parseInt(amount || minAmount || '1');
       return {
         hasAccess: userNFTs >= required,
         reason: userNFTs >= required 
-          ? `You have ${userNFTs} ${tokenName} NFTs` 
-          : `Need ${required} ${tokenName} NFTs (you have ${userNFTs})`
+          ? `You have ${userNFTs} THINK Agent NFTs (need ${required})` 
+          : `Need ${required} THINK Agent NFTs (you have ${userNFTs})`
+      };
+    }
+
+    if (type === 'EITHER') {
+      const userThink = parseFloat(tokenBalances['THINK'] || '0');
+      const userNFTs = parseInt(tokenBalances['NFT'] || '0');
+      const requiredThink = parseFloat(think || '1000');
+      const hasThink = userThink >= requiredThink;
+      const hasNFT = userNFTs >= 1;
+      
+      return {
+        hasAccess: hasThink || hasNFT,
+        reason: hasThink || hasNFT
+          ? `Access granted: ${hasThink ? `${userThink} THINK tokens` : ''}${hasThink && hasNFT ? ' and ' : ''}${hasNFT ? `${userNFTs} NFTs` : ''}`
+          : `Need either ${requiredThink} THINK tokens OR 1 THINK Agent NFT (you have ${userThink} THINK, ${userNFTs} NFTs)`
       };
     }
 
@@ -145,7 +165,7 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-600 dark:text-gray-300">Instructor:</span>
-                <span className="text-slate-900 dark:text-white">{course.instructor}</span>
+                <span className="text-slate-900 dark:text-white">{course.instructor || course.instructorName || 'TBA'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600 dark:text-gray-300">Duration:</span>

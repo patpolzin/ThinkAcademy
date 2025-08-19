@@ -50,7 +50,22 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
     );
   }
 
-  const canAccess = true; // Mock access check - replace with actual token verification
+  // Token access verification
+  const getTokenAccess = () => {
+    const tokenReq = typeof course.tokenRequirement === 'string' 
+      ? JSON.parse(course.tokenRequirement) 
+      : course.tokenRequirement || { type: 'NONE' };
+    
+    // Free courses should be accessible to all
+    if (!tokenReq || tokenReq.type === 'NONE') {
+      return true;
+    }
+    
+    // For demo purposes, allow access (in production, check actual token balances)
+    return true;
+  };
+  
+  const canAccess = getTokenAccess();
   const instructor = course.instructor || course.instructorName || 'Unknown Instructor';
   const duration = course.duration || 10; // Default 10 hours
   const studentCount = course.studentCount || 0;
@@ -155,7 +170,9 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
         <img 
           src={course.thumbnail || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=200&fit=crop'} 
           alt={course.title}
-          className="w-full h-48 object-cover"
+          className={`w-full h-48 object-cover transition-transform duration-300 ${
+            showEnrollmentModal ? '' : 'hover:scale-105'
+          }`}
           loading="lazy"
           onError={(e) => {
             e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"%3E%3Crect width="400" height="200" fill="%23f1f5f9"/%3E%3Ctext x="200" y="100" text-anchor="middle" dy="0.3em" font-family="Arial" font-size="16" fill="%2364748b"%3ECourse Image%3C/text%3E%3C/svg%3E';
@@ -230,10 +247,6 @@ export default function CourseCard({ course, enrollment, compact = false, onEnro
           course={course}
           isOpen={showEnrollmentModal}
           onClose={() => setShowEnrollmentModal(false)}
-          onSuccess={() => {
-            setShowEnrollmentModal(false);
-            // Optionally refresh data here
-          }}
         />
       )}
     </div>
