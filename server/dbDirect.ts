@@ -68,8 +68,8 @@ export class DirectStorage {
     const sql = createDbConnection();
     try {
       const result = await sql`
-        INSERT INTO courses (title, description, category, difficulty, instructor_name, token_requirement, is_active)
-        VALUES (${courseData.title}, ${courseData.description}, ${courseData.category}, ${courseData.difficulty}, ${courseData.instructorName}, ${JSON.stringify(courseData.tokenRequirement)}, ${courseData.isActive})
+        INSERT INTO courses (title, description, category, difficulty, duration, instructor_name, instructor_id, token_requirement, is_active)
+        VALUES (${courseData.title}, ${courseData.description}, ${courseData.category}, ${courseData.difficulty}, ${courseData.duration || 0}, ${courseData.instructorName}, ${courseData.instructorId}, ${JSON.stringify(courseData.tokenRequirement)}, ${courseData.isActive !== false})
         RETURNING *
       `;
       await sql.end();
@@ -192,11 +192,19 @@ export class DirectStorage {
       // Convert wallet address to user ID if needed
       let userId = enrollmentData.userId;
       if (typeof userId === 'string' && userId.startsWith('0x')) {
-        const userResult = await sql`SELECT id FROM users WHERE wallet_address = ${userId.toLowerCase()}`;
+        let userResult = await sql`SELECT id FROM users WHERE wallet_address = ${userId.toLowerCase()}`;
         if (userResult.length === 0) {
-          throw new Error('User not found');
+          // Create user if they don't exist
+          console.log(`Creating new user for wallet: ${userId}`);
+          const newUserResult = await sql`
+            INSERT INTO users (wallet_address, display_name, email)
+            VALUES (${userId.toLowerCase()}, ${`User ${userId.slice(-6)}`}, ${`${userId.slice(-6)}@example.com`})
+            RETURNING id
+          `;
+          userId = newUserResult[0].id;
+        } else {
+          userId = userResult[0].id;
         }
-        userId = userResult[0].id;
       }
       
       const result = await sql`
@@ -259,6 +267,23 @@ export class DirectStorage {
       return result[0];
     } catch (error) {
       console.error('Database error updating user:', error);
+      throw error;
+    }
+  }
+
+  async getInstructors() {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`
+        SELECT id, display_name, email, wallet_address 
+        FROM users 
+        WHERE is_instructor = true OR is_admin = true
+        ORDER BY display_name
+      `;
+      await sql.end();
+      return result;
+    } catch (error) {
+      console.error('Database error fetching instructors:', error);
       throw error;
     }
   }

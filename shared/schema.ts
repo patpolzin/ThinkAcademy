@@ -27,15 +27,18 @@ export const courses = pgTable("courses", {
   description: text("description"),
   category: varchar("category", { length: 100 }),
   difficulty: varchar("difficulty", { length: 50 }),
+  duration: integer("duration").default(0), // Duration in hours
   instructorName: varchar("instructor_name", { length: 255 }),
   instructorId: integer("instructor_id").references(() => users.id),
   tokenRequirement: jsonb("token_requirement").$type<{
     type: 'NONE' | 'ERC20' | 'NFT' | 'EITHER';
+    network?: 'mainnet' | 'base';
     tokenName?: string;
     tokenAddress?: string;
     minAmount?: string;
     options?: Array<{
       type: 'ERC20' | 'NFT';
+      network: 'mainnet' | 'base';
       tokenName: string;
       tokenAddress: string;
       minAmount: string;
@@ -86,7 +89,7 @@ export const liveSessions = pgTable("live_sessions", {
 
 export const assignments = pgTable("assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  courseId: varchar("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
+  courseId: integer("course_id").notNull().references(() => courses.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description"),
   instructions: text("instructions"),
@@ -99,7 +102,7 @@ export const assignments = pgTable("assignments", {
 export const assignmentSubmissions = pgTable("assignment_submissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   assignmentId: varchar("assignment_id").notNull().references(() => assignments.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   status: text("status").$type<'pending' | 'submitted' | 'graded'>().default('pending'),
   grade: integer("grade"),
   feedback: text("feedback"),

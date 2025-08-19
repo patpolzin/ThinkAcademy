@@ -35,7 +35,13 @@ export default function EnrollmentModal({ isOpen, onClose, course }: EnrollmentM
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
+        const text = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(text);
+        } catch {
+          errorData = { error: text || response.statusText };
+        }
         throw new Error(errorData.error || 'Failed to enroll');
       }
       

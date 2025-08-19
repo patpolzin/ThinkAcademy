@@ -227,6 +227,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get instructors list
+  app.get('/api/users/instructors', async (req, res) => {
+    try {
+      const instructors = await directDb.getInstructors();
+      res.json(instructors);
+    } catch (error) {
+      console.error('Error fetching instructors:', error);
+      res.status(500).json({ error: 'Failed to fetch instructors' });
+    }
+  });
+
   app.put("/api/courses/:id", async (req, res) => {
     try {
       const updates = req.body;
