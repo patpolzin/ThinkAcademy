@@ -67,9 +67,22 @@ export class DirectStorage {
   async createCourse(courseData: any) {
     const sql = createDbConnection();
     try {
+      // Handle undefined values by providing defaults
+      const safeData = {
+        title: courseData.title || 'Untitled Course',
+        description: courseData.description || '',
+        category: courseData.category || 'General',
+        difficulty: courseData.difficulty || 'Beginner',
+        duration: courseData.duration || 0,
+        instructorName: courseData.instructorName || courseData.instructor || 'Unknown',
+        instructorId: courseData.instructorId || null,
+        tokenRequirement: courseData.tokenRequirement || {},
+        isActive: courseData.isActive !== false
+      };
+
       const result = await sql`
         INSERT INTO courses (title, description, category, difficulty, duration, instructor_name, instructor_id, token_requirement, is_active)
-        VALUES (${courseData.title}, ${courseData.description}, ${courseData.category}, ${courseData.difficulty}, ${courseData.duration || 0}, ${courseData.instructorName}, ${courseData.instructorId}, ${JSON.stringify(courseData.tokenRequirement)}, ${courseData.isActive !== false})
+        VALUES (${safeData.title}, ${safeData.description}, ${safeData.category}, ${safeData.difficulty}, ${safeData.duration}, ${safeData.instructorName}, ${safeData.instructorId}, ${JSON.stringify(safeData.tokenRequirement)}, ${safeData.isActive})
         RETURNING *
       `;
       await sql.end();
@@ -131,9 +144,188 @@ export class DirectStorage {
     try {
       await sql`DELETE FROM enrollments WHERE id = ${enrollmentId}`;
       await sql.end();
+    } catch (error) {
+      console.error('Database error deleting enrollment:', error);
+      throw error;
+    }
+  }
+
+  // Course content management methods
+  async createLesson(lessonData: any) {
+    const sql = createDbConnection();
+    try {
+      const safeData = {
+        courseId: lessonData.courseId,
+        title: lessonData.title || 'Untitled Lesson',
+        description: lessonData.description || '',
+        content: lessonData.content || '',
+        videoUrl: lessonData.videoUrl || null,
+        order: lessonData.order || 0,
+        duration: lessonData.duration || 0
+      };
+
+      const result = await sql`
+        INSERT INTO lessons (course_id, title, description, content, video_url, "order", duration)
+        VALUES (${safeData.courseId}, ${safeData.title}, ${safeData.description}, ${safeData.content}, ${safeData.videoUrl}, ${safeData.order}, ${safeData.duration})
+        RETURNING *
+      `;
+      await sql.end();
       return result[0];
     } catch (error) {
-      console.error('Database error creating course:', error);
+      console.error('Database error creating lesson:', error);
+      throw error;
+    }
+  }
+
+  async createQuiz(quizData: any) {
+    const sql = createDbConnection();
+    try {
+      const safeData = {
+        courseId: quizData.courseId,
+        title: quizData.title || 'Untitled Quiz',
+        description: quizData.description || '',
+        questions: quizData.questions || [],
+        passingScore: quizData.passingScore || 70,
+        timeLimit: quizData.timeLimit || null,
+        order: quizData.order || 0
+      };
+
+      const result = await sql`
+        INSERT INTO quizzes (course_id, title, description, questions, passing_score, time_limit, "order")
+        VALUES (${safeData.courseId}, ${safeData.title}, ${safeData.description}, ${JSON.stringify(safeData.questions)}, ${safeData.passingScore}, ${safeData.timeLimit}, ${safeData.order})
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error creating quiz:', error);
+      throw error;
+    }
+  }
+
+  async createResource(resourceData: any) {
+    const sql = createDbConnection();
+    try {
+      const safeData = {
+        courseId: resourceData.courseId,
+        title: resourceData.title || 'Untitled Resource',
+        description: resourceData.description || '',
+        type: resourceData.type || 'document',
+        url: resourceData.url || null,
+        fileSize: resourceData.fileSize || null,
+        order: resourceData.order || 0
+      };
+
+      const result = await sql`
+        INSERT INTO resources (course_id, title, description, type, url, file_size, "order")
+        VALUES (${safeData.courseId}, ${safeData.title}, ${safeData.description}, ${safeData.type}, ${safeData.url}, ${safeData.fileSize}, ${safeData.order})
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error creating resource:', error);
+      throw error;
+    }
+  }
+
+  async updateLesson(lessonId: number, updates: any) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`
+        UPDATE lessons 
+        SET title = COALESCE(${updates.title}, title),
+            description = COALESCE(${updates.description}, description),
+            content = COALESCE(${updates.content}, content),
+            video_url = COALESCE(${updates.videoUrl}, video_url),
+            "order" = COALESCE(${updates.order}, "order"),
+            duration = COALESCE(${updates.duration}, duration),
+            updated_at = NOW()
+        WHERE id = ${lessonId}
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error updating lesson:', error);
+      throw error;
+    }
+  }
+
+  async deleteLesson(lessonId: number) {
+    const sql = createDbConnection();
+    try {
+      await sql`DELETE FROM lessons WHERE id = ${lessonId}`;
+      await sql.end();
+    } catch (error) {
+      console.error('Database error deleting lesson:', error);
+      throw error;
+    }
+  }
+
+  async deleteQuiz(quizId: number) {
+    const sql = createDbConnection();
+    try {
+      await sql`DELETE FROM quizzes WHERE id = ${quizId}`;
+      await sql.end();
+    } catch (error) {
+      console.error('Database error deleting quiz:', error);
+      throw error;
+    }
+  }
+
+  async deleteResource(resourceId: number) {
+    const sql = createDbConnection();
+    try {
+      await sql`DELETE FROM resources WHERE id = ${resourceId}`;
+      await sql.end();
+    } catch (error) {
+      console.error('Database error deleting resource:', error);
+      throw error;
+    }
+  }
+
+  async updateQuiz(quizId: number, updates: any) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`
+        UPDATE quizzes 
+        SET title = COALESCE(${updates.title}, title),
+            description = COALESCE(${updates.description}, description),
+            questions = COALESCE(${JSON.stringify(updates.questions)}, questions),
+            passing_score = COALESCE(${updates.passingScore}, passing_score),
+            time_limit = COALESCE(${updates.timeLimit}, time_limit),
+            "order" = COALESCE(${updates.order}, "order"),
+            updated_at = NOW()
+        WHERE id = ${quizId}
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error updating quiz:', error);
+      throw error;
+    }
+  }
+
+  async updateResource(resourceId: number, updates: any) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`
+        UPDATE resources 
+        SET title = COALESCE(${updates.title}, title),
+            description = COALESCE(${updates.description}, description),
+            type = COALESCE(${updates.type}, type),
+            url = COALESCE(${updates.url}, url),
+            file_size = COALESCE(${updates.fileSize}, file_size),
+            "order" = COALESCE(${updates.order}, "order")
+        WHERE id = ${resourceId}
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error updating resource:', error);
       throw error;
     }
   }

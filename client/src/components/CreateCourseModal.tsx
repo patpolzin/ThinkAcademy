@@ -14,7 +14,7 @@ interface CreateCourseModalProps {
   onSave: (courseData: any) => void;
 }
 
-export default function CreateCourseModal({ isOpen, onClose, onSave }: CreateCourseModalProps) {
+export function CreateCourseModal({ isOpen, onClose, onSave }: CreateCourseModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { address, user } = useWallet();
@@ -430,3 +430,5 @@ export default function CreateCourseModal({ isOpen, onClose, onSave }: CreateCou
     </div>
   );
 }
+
+export default CreateCourseModal;

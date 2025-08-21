@@ -4,7 +4,7 @@ import Navigation from "@/components/Navigation";
 import WalletConnect from "@/components/WalletConnect";
 import CourseCard from "@/components/CourseCard";
 import LiveSessionCard from "@/components/LiveSessionCard";
-import CreateCourseModal from "@/components/CreateCourseModal";
+import { CreateCourseModal } from "@/components/CreateCourseModal";
 import EnrollmentModal from "@/components/EnrollmentModal";
 import ProfileModal from "@/components/ProfileModal";
 import AuthModal from "@/components/AuthModal";

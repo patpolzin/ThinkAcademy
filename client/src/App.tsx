@@ -7,6 +7,7 @@ import { WalletProvider } from "@/components/WalletProvider";
 import { PrivyProvider } from '@privy-io/react-auth';
 import Dashboard from "@/pages/dashboard";
 import CourseDetailPage from "@/pages/course-detail";
+import { InstructorDashboard } from "@/pages/instructor-dashboard";
 
 const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || 'cme35jx9100i6ky0bxiecsetb';
 
@@ -15,6 +16,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/instructor" component={InstructorDashboard} />
       <Route path="/course/:id" component={CourseDetailPage} />
       <Route>
         <div className="min-h-screen w-full flex items-center justify-center bg-slate-50">

@@ -535,9 +535,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/courses/:courseId/lessons', async (req, res) => {
     try {
-      const lesson = await storage.createLesson({
+      const lesson = await directDb.createLesson({
         ...req.body,
-        courseId: req.params.courseId
+        courseId: parseInt(req.params.courseId)
       });
       res.json(lesson);
     } catch (error) {
@@ -548,7 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/lessons/:id', async (req, res) => {
     try {
-      const lesson = await storage.updateLesson(req.params.id, req.body);
+      const lesson = await directDb.updateLesson(parseInt(req.params.id), req.body);
       res.json(lesson);
     } catch (error) {
       console.error('Error updating lesson:', error);
@@ -558,7 +558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/lessons/:id', async (req, res) => {
     try {
-      await storage.deleteLesson(req.params.id);
+      await directDb.deleteLesson(parseInt(req.params.id));
       res.status(204).send();
     } catch (error) {
       console.error('Error deleting lesson:', error);
@@ -579,14 +579,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/courses/:courseId/quizzes', async (req, res) => {
     try {
-      const quiz = await storage.createQuiz({
+      const quiz = await directDb.createQuiz({
         ...req.body,
-        courseId: req.params.courseId
+        courseId: parseInt(req.params.courseId)
       });
       res.json(quiz);
     } catch (error) {
       console.error('Error creating quiz:', error);
       res.status(500).json({ error: 'Failed to create quiz' });
+    }
+  });
+
+  app.put('/api/quizzes/:id', async (req, res) => {
+    try {
+      const quiz = await directDb.updateQuiz(parseInt(req.params.id), req.body);
+      res.json(quiz);
+    } catch (error) {
+      console.error('Error updating quiz:', error);
+      res.status(500).json({ error: 'Failed to update quiz' });
+    }
+  });
+
+  app.delete('/api/quizzes/:id', async (req, res) => {
+    try {
+      await directDb.deleteQuiz(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting quiz:', error);
+      res.status(500).json({ error: 'Failed to delete quiz' });
     }
   });
 
@@ -603,14 +623,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/courses/:courseId/resources', async (req, res) => {
     try {
-      const resource = await storage.createResource({
+      const resource = await directDb.createResource({
         ...req.body,
-        courseId: req.params.courseId
+        courseId: parseInt(req.params.courseId)
       });
       res.json(resource);
     } catch (error) {
       console.error('Error creating resource:', error);
       res.status(500).json({ error: 'Failed to create resource' });
+    }
+  });
+
+  app.put('/api/resources/:id', async (req, res) => {
+    try {
+      const resource = await directDb.updateResource(parseInt(req.params.id), req.body);
+      res.json(resource);
+    } catch (error) {
+      console.error('Error updating resource:', error);
+      res.status(500).json({ error: 'Failed to update resource' });
+    }
+  });
+
+  app.delete('/api/resources/:id', async (req, res) => {
+    try {
+      await directDb.deleteResource(parseInt(req.params.id));
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting resource:', error);
+      res.status(500).json({ error: 'Failed to delete resource' });
     }
   });
 
