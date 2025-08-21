@@ -881,21 +881,38 @@ export function CourseCreationTest() {
     </div>
   );
 
-  // Modal for creating/editing lessons
-  const renderLessonModal = () => {
-    const isEdit = activeModal?.mode === 'edit';
-    const lessonData = activeModal?.data || {};
-    const [formData, setFormData] = useState({
-      title: lessonData.title || '',
-      description: lessonData.description || '',
-      content: lessonData.content || '',
-      videoUrl: lessonData.videoUrl || '',
-      duration: lessonData.duration || 15,
-    });
+  // Modal state for lessons
+  const [lessonFormData, setLessonFormData] = useState({
+    title: '',
+    description: '',
+    content: '',
+    videoUrl: '',
+    duration: 15,
+  });
+
+  // Modal state for quizzes
+  const [quizFormData, setQuizFormData] = useState({
+    title: '',
+    description: '',
+    timeLimit: 10,
+    attempts: 3,
+    passingScore: 70,
+    questions: [],
+  });
+
+  // Modal state for resources
+  const [resourceFormData, setResourceFormData] = useState({
+    title: '',
+    description: '',
+    fileType: 'link',
+    url: '',
+    fileUrl: '',
+    isPublic: true,
+  });
 
     const handleSave = () => {
       const newLesson = {
-        ...formData,
+        ...lessonFormData,
         order: isEdit ? lessonData.order : course.lessons.length + 1,
       };
 
@@ -908,9 +925,10 @@ export function CourseCreationTest() {
       }
 
       setActiveModal(null);
+      setLessonFormData({ title: '', description: '', content: '', videoUrl: '', duration: 15 });
       toast({
         title: isEdit ? "Lesson Updated" : "Lesson Created",
-        description: `Lesson "${formData.title}" has been ${isEdit ? 'updated' : 'added to the course'}.`,
+        description: `Lesson "${lessonFormData.title}" has been ${isEdit ? 'updated' : 'added to the course'}.`,
       });
     };
 
@@ -994,25 +1012,132 @@ export function CourseCreationTest() {
     );
   };
 
+  // Current question state
+  const [currentQuestion, setCurrentQuestion] = useState({
+    question: '',
+    options: ['', '', '', ''],
+    correctAnswer: 0,
+    explanation: '',
+    type: 'multiple-choice' as 'multiple-choice' | 'true-false',
+  });
+
+  // Modal for creating/editing lessons  
+  const LessonModal = () => {
+    const isEdit = activeModal?.mode === 'edit';
+    const lessonData = activeModal?.data || {};
+
+    const handleSave = () => {
+      const newLesson = {
+        ...lessonFormData,
+        order: isEdit ? lessonData.order : course.lessons.length + 1,
+      };
+
+      if (isEdit) {
+        const newLessons = [...course.lessons];
+        newLessons[lessonData.index] = newLesson;
+        setCourse({ ...course, lessons: newLessons });
+      } else {
+        setCourse({ ...course, lessons: [...course.lessons, newLesson] });
+      }
+
+      setActiveModal(null);
+      setLessonFormData({ title: '', description: '', content: '', videoUrl: '', duration: 15 });
+      toast({
+        title: isEdit ? "Lesson Updated" : "Lesson Created",
+        description: `Lesson "${lessonFormData.title}" has been ${isEdit ? 'updated' : 'added to the course'}.`,
+      });
+    };
+
+    return (
+      <Dialog open={activeModal?.type === 'lesson'} onOpenChange={() => {
+        setActiveModal(null);
+        setLessonFormData({ title: '', description: '', content: '', videoUrl: '', duration: 15 });
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{isEdit ? 'Edit Lesson' : 'Create New Lesson'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="lesson-title">Lesson Title</Label>
+              <Input
+                id="lesson-title"
+                value={lessonFormData.title}
+                onChange={(e) => setLessonFormData({ ...lessonFormData, title: e.target.value })}
+                placeholder="Introduction to Blockchain"
+                data-testid="input-lesson-title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="lesson-description">Description</Label>
+              <Textarea
+                id="lesson-description"
+                value={lessonFormData.description}
+                onChange={(e) => setLessonFormData({ ...lessonFormData, description: e.target.value })}
+                placeholder="Brief overview of what students will learn"
+                data-testid="textarea-lesson-description"
+              />
+            </div>
+            <div>
+              <Label htmlFor="lesson-content">Lesson Content</Label>
+              <Textarea
+                id="lesson-content"
+                value={lessonFormData.content}
+                onChange={(e) => setLessonFormData({ ...lessonFormData, content: e.target.value })}
+                placeholder="Detailed lesson content, instructions, and learning materials"
+                className="min-h-[120px]"
+                data-testid="textarea-lesson-content"
+              />
+            </div>
+            <div>
+              <Label htmlFor="lesson-video">Video URL (Optional)</Label>
+              <Input
+                id="lesson-video"
+                value={lessonFormData.videoUrl}
+                onChange={(e) => setLessonFormData({ ...lessonFormData, videoUrl: e.target.value })}
+                placeholder="https://youtube.com/watch?v=... or embedded video URL"
+                data-testid="input-lesson-video"
+              />
+              {lessonFormData.videoUrl && (
+                <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                    <Video className="w-4 h-4" />
+                    <span>Video will be embedded in the lesson</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="lesson-duration">Duration (minutes)</Label>
+              <Input
+                id="lesson-duration"
+                type="number"
+                value={lessonFormData.duration}
+                onChange={(e) => setLessonFormData({ ...lessonFormData, duration: parseInt(e.target.value) || 15 })}
+                min="1"
+                max="180"
+                data-testid="input-lesson-duration"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setActiveModal(null);
+              setLessonFormData({ title: '', description: '', content: '', videoUrl: '', duration: 15 });
+            }}>Cancel</Button>
+            <Button onClick={handleSave} disabled={!lessonFormData.title.trim()}>
+              {isEdit ? 'Update' : 'Create'} Lesson
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   // Modal for creating/editing quizzes
-  const renderQuizModal = () => {
+  const QuizModal = () => {
     const isEdit = activeModal?.mode === 'edit';
     const quizData = activeModal?.data || {};
-    const [formData, setFormData] = useState({
-      title: quizData.title || '',
-      description: quizData.description || '',
-      timeLimit: quizData.timeLimit || 10,
-      attempts: quizData.attempts || 3,
-      passingScore: quizData.passingScore || 70,
-      questions: quizData.questions || [],
-    });
-    const [currentQuestion, setCurrentQuestion] = useState({
-      question: '',
-      options: ['', '', '', ''],
-      correctAnswer: 0,
-      explanation: '',
-      type: 'multiple-choice' as 'multiple-choice' | 'true-false',
-    });
 
     const addQuestion = () => {
       if (currentQuestion.type === 'true-false') {

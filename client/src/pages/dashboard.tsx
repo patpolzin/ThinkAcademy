@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard, User, Plus, ChevronRight } from "lucide-react";
 import AdminPanel from "@/components/AdminPanel";
 import InstructorPanel from "@/components/InstructorPanel";
-import { CourseCreationTest } from "@/components/CourseCreationTest";
+import { CourseContentBuilder } from "@/components/CourseContentBuilder";
 import { GameifiedProgress, calculateUserStats, generateMockAchievements } from "@/components/GameifiedProgress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -316,7 +316,27 @@ export default function Dashboard() {
         return <AdminPanel user={userData} />;
 
       case 'test':
-        return <CourseCreationTest />;
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Course Content Builder</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CourseContentBuilder 
+                  courseData={{
+                    lessons: [],
+                    quizzes: [],
+                    resources: []
+                  }}
+                  onUpdate={(content) => {
+                    console.log('Course content updated:', content);
+                  }}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        );
 
       default:
         return null;
