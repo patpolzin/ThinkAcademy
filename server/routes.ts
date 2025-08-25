@@ -426,6 +426,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create new forum post
+  app.post("/api/forums", async (req, res) => {
+    try {
+      const { courseId, userId, title, content, category } = req.body;
+      
+      // Convert wallet address to user ID if needed
+      let actualUserId = userId;
+      if (typeof userId === 'string' && userId.startsWith('0x')) {
+        const user = await directDb.getUser(userId);
+        if (user) {
+          actualUserId = user.id;
+        }
+      }
+      
+      const post = await directDb.createForumPost({
+        courseId: parseInt(courseId),
+        userId: actualUserId,
+        title,
+        content,
+        category
+      });
+      res.json(post);
+    } catch (error) {
+      console.error("Forum post creation error:", error);
+      res.status(500).json({ error: "Failed to create forum post" });
+    }
+  });
+
+  // Get forum replies
+  app.get("/api/forums/:forumId/replies", async (req, res) => {
+    try {
+      const replies = await directDb.getForumReplies(req.params.forumId);
+      res.json(replies);
+    } catch (error) {
+      console.error("Forum replies fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch forum replies" });
+    }
+  });
+
+  // Create forum reply
+  app.post("/api/forums/:forumId/replies", async (req, res) => {
+    try {
+      const { userId, content } = req.body;
+      
+      // Convert wallet address to user ID if needed
+      let actualUserId = userId;
+      if (typeof userId === 'string' && userId.startsWith('0x')) {
+        const user = await directDb.getUser(userId);
+        if (user) {
+          actualUserId = user.id;
+        }
+      }
+      
+      const reply = await directDb.createForumReply({
+        forumId: req.params.forumId,
+        userId: actualUserId,
+        content
+      });
+      res.json(reply);
+    } catch (error) {
+      console.error("Forum reply creation error:", error);
+      res.status(500).json({ error: "Failed to create forum reply" });
+    }
+  });
+
   // Reminder routes
   app.get("/api/reminders/user/:userId", async (req, res) => {
     try {

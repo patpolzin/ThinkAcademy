@@ -3,12 +3,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { useWallet } from '@/components/WalletProvider';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   BookOpen, Video, FileText, MessageSquare, Users, 
   Play, Download, Clock, Award, CheckCircle, Lock,
-  Star, Calendar, User
+  Star, Calendar, User, Reply, Send
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import type { Course, Lesson, Quiz, Resource, Forum, Enrollment } from '@shared/schema';
@@ -21,7 +27,14 @@ interface StudentCourseViewProps {
 
 export function StudentCourseView({ course, userId, enrollment }: StudentCourseViewProps) {
   const [activeTab, setActiveTab] = useState('lessons');
+  const [showNewTopicModal, setShowNewTopicModal] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Forum | null>(null);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [newTopicData, setNewTopicData] = useState({ title: '', content: '', category: 'Discussion' });
+  const [replyContent, setReplyContent] = useState('');
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { address } = useWallet();
 
   // Check if user is enrolled
   const { data: enrollmentCheck } = useQuery({
@@ -304,7 +317,11 @@ export function StudentCourseView({ course, userId, enrollment }: StudentCourseV
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-black">Course Discussion</h3>
-        <Button className="bg-cyan-600 hover:bg-cyan-700 text-white">
+        <Button 
+          className="bg-cyan-600 hover:bg-cyan-700 text-white"
+          onClick={() => setShowNewTopicModal(true)}
+          data-testid="button-new-topic"
+        >
           <MessageSquare className="w-4 h-4 mr-2" />
           New Topic
         </Button>
@@ -312,7 +329,15 @@ export function StudentCourseView({ course, userId, enrollment }: StudentCourseV
 
       <div className="grid gap-4">
         {forumPosts.map((post: Forum) => (
-          <Card key={post.id} className="border border-gray-200 hover:shadow-md transition-shadow">
+          <Card 
+            key={post.id} 
+            className="border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => {
+              setSelectedPost(post);
+              setShowPostModal(true);
+            }}
+            data-testid={`card-forum-post-${post.id}`}
+          >
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -330,9 +355,11 @@ export function StudentCourseView({ course, userId, enrollment }: StudentCourseV
                   </div>
                   <p className="text-gray-600 text-sm">{post.content}</p>
                   <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-                    <span>{post.replies} replies</span>
+                    <span>{post.replies || 0} replies</span>
                     <span>•</span>
-                    <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                    <span>by {post.user_display_name || 'Anonymous'}</span>
+                    <span>•</span>
+                    <span>{new Date(post.createdAt || post.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
@@ -342,6 +369,74 @@ export function StudentCourseView({ course, userId, enrollment }: StudentCourseV
       </div>
     </div>
   );
+
+  // Create new topic mutation
+  const createTopicMutation = useMutation({
+    mutationFn: async (topicData: { title: string; content: string; category: string }) => {
+      return apiRequest('/api/forums', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...topicData,
+          courseId: course.id,
+          userId: address
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/forums', 'course', course.id] });
+      setShowNewTopicModal(false);
+      setNewTopicData({ title: '', content: '', category: 'Discussion' });
+      toast({ title: "Topic created successfully!" });
+    },
+    onError: (error) => {
+      toast({ title: "Failed to create topic", description: error.message, variant: "destructive" });
+    }
+  });
+
+  // Get forum replies query
+  const { data: forumReplies = [] } = useQuery({
+    queryKey: ['/api/forums', selectedPost?.id, 'replies'],
+    queryFn: () => selectedPost ? apiRequest(`/api/forums/${selectedPost.id}/replies`) : Promise.resolve([]),
+    enabled: !!selectedPost,
+  });
+
+  // Create reply mutation
+  const createReplyMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest(`/api/forums/${selectedPost?.id}/replies`, {
+        method: 'POST',
+        body: JSON.stringify({
+          content,
+          userId: address
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/forums', selectedPost?.id, 'replies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/forums', 'course', course.id] });
+      setReplyContent('');
+      toast({ title: "Reply posted successfully!" });
+    },
+    onError: (error) => {
+      toast({ title: "Failed to post reply", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const handleCreateTopic = () => {
+    if (!newTopicData.title.trim() || !newTopicData.content.trim()) {
+      toast({ title: "Please fill in all fields", variant: "destructive" });
+      return;
+    }
+    createTopicMutation.mutate(newTopicData);
+  };
+
+  const handleCreateReply = () => {
+    if (!replyContent.trim()) {
+      toast({ title: "Please enter a reply", variant: "destructive" });
+      return;
+    }
+    createReplyMutation.mutate(replyContent);
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -402,6 +497,131 @@ export function StudentCourseView({ course, userId, enrollment }: StudentCourseV
           {renderDiscussion()}
         </TabsContent>
       </Tabs>
+
+      {/* New Topic Modal */}
+      <Dialog open={showNewTopicModal} onOpenChange={setShowNewTopicModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create New Discussion Topic</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="topic-title">Title</Label>
+              <Input
+                id="topic-title"
+                value={newTopicData.title}
+                onChange={(e) => setNewTopicData({ ...newTopicData, title: e.target.value })}
+                placeholder="Enter topic title"
+                data-testid="input-topic-title"
+              />
+            </div>
+            <div>
+              <Label htmlFor="topic-content">Content</Label>
+              <Textarea
+                id="topic-content"
+                value={newTopicData.content}
+                onChange={(e) => setNewTopicData({ ...newTopicData, content: e.target.value })}
+                placeholder="Describe your question or start a discussion..."
+                rows={6}
+                data-testid="textarea-topic-content"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowNewTopicModal(false)}
+                data-testid="button-cancel-topic"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateTopic}
+                disabled={createTopicMutation.isPending}
+                data-testid="button-create-topic"
+              >
+                {createTopicMutation.isPending ? 'Creating...' : 'Create Topic'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Post Modal */}
+      <Dialog open={showPostModal} onOpenChange={setShowPostModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedPost?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedPost && (
+            <div className="space-y-6">
+              {/* Original Post */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                    <User className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <span className="font-medium">{selectedPost.user_display_name || 'Anonymous'}</span>
+                  <Badge variant={selectedPost.isResolved ? "default" : "secondary"} className="text-xs">
+                    {selectedPost.isResolved ? 'Resolved' : 'Open'}
+                  </Badge>
+                  <span className="text-xs text-gray-500">
+                    {new Date(selectedPost.createdAt || selectedPost.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+                <p className="text-gray-700 dark:text-gray-300">{selectedPost.content}</p>
+              </div>
+
+              {/* Replies */}
+              <div className="space-y-4">
+                <h4 className="font-semibold">Replies ({forumReplies.length})</h4>
+                {forumReplies.map((reply: any) => (
+                  <div key={reply.id} className="p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
+                        <User className="w-3 h-3 text-blue-600" />
+                      </div>
+                      <span className="text-sm font-medium">{reply.user_display_name || 'Anonymous'}</span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(reply.createdAt || reply.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-gray-700 dark:text-gray-300 text-sm">{reply.content}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Reply Form */}
+              <div className="space-y-4 border-t pt-4">
+                <h4 className="font-semibold">Add a Reply</h4>
+                <Textarea
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  placeholder="Write your reply..."
+                  rows={4}
+                  data-testid="textarea-reply-content"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setReplyContent('')}
+                    data-testid="button-clear-reply"
+                  >
+                    Clear
+                  </Button>
+                  <Button 
+                    onClick={handleCreateReply}
+                    disabled={createReplyMutation.isPending}
+                    data-testid="button-post-reply"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {createReplyMutation.isPending ? 'Posting...' : 'Post Reply'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -589,4 +589,64 @@ export class DirectStorage {
       throw error;
     }
   }
+
+  // Forum methods
+  async createForumPost(postData: any) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`
+        INSERT INTO forums (course_id, user_id, title, content, category)
+        VALUES (${postData.courseId}, ${postData.userId}, ${postData.title}, ${postData.content}, ${postData.category || 'Discussion'})
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error creating forum post:', error);
+      throw error;
+    }
+  }
+
+  async createForumReply(replyData: any) {
+    const sql = createDbConnection();
+    try {
+      // Create the reply
+      const replyResult = await sql`
+        INSERT INTO forum_replies (forum_id, user_id, content)
+        VALUES (${replyData.forumId}, ${replyData.userId}, ${replyData.content})
+        RETURNING *
+      `;
+      
+      // Update the forum post reply count
+      await sql`
+        UPDATE forums 
+        SET replies = replies + 1, last_reply_at = NOW()
+        WHERE id = ${replyData.forumId}
+      `;
+      
+      await sql.end();
+      return replyResult[0];
+    } catch (error) {
+      console.error('Database error creating forum reply:', error);
+      throw error;
+    }
+  }
+
+  async getForumReplies(forumId: string) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`
+        SELECT fr.*, u.display_name as user_display_name
+        FROM forum_replies fr
+        LEFT JOIN users u ON fr.user_id::text = u.id::text
+        WHERE fr.forum_id = ${forumId}
+        ORDER BY fr.created_at ASC
+      `;
+      await sql.end();
+      return result;
+    } catch (error) {
+      console.error('Database error fetching forum replies:', error);
+      throw error;
+    }
+  }
 }
