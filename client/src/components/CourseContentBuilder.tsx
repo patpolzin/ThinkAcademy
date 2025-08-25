@@ -1193,7 +1193,7 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
                           <div>
                             <h4 className="font-semibold text-slate-900 dark:text-slate-50">{resource.title}</h4>
                             <p className="text-slate-700 dark:text-slate-300 text-sm mt-1">{resource.description}</p>
-                            {resource.fileType === 'link' && resource.url && (
+                            {(resource.fileType || resource.file_type) === 'link' && resource.url && (
                               <div className="mt-2">
                                 <Button
                                   size="sm"
@@ -1208,13 +1208,13 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
                             )}
                             <div className="flex items-center gap-4 mt-2">
                               <Badge variant="secondary" className="text-xs">
-                                {resource.fileType.toUpperCase()}
+                                {(resource.fileType || resource.file_type || 'unknown').toUpperCase()}
                               </Badge>
                               <Badge 
                                 variant={resource.isPublic ? "default" : "outline"} 
                                 className="text-xs"
                               >
-                                {resource.isPublic ? 'Public' : 'Private'}
+                                {(resource.isPublic || resource.is_public) ? 'Public' : 'Private'}
                               </Badge>
                             </div>
                           </div>
