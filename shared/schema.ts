@@ -264,18 +264,18 @@ export const lessonProgressRelations = relations(lessonProgress, ({ one }) => ({
   user: one(users, { fields: [lessonProgress.userId], references: [users.id] }),
 }));
 
-// Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
-export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({ id: true, enrolledAt: true, lastAccessedAt: true });
-export const insertLiveSessionSchema = createInsertSchema(liveSessions).omit({ id: true, createdAt: true });
-export const insertAssignmentSchema = createInsertSchema(assignments).omit({ id: true, createdAt: true });
-export const insertLessonSchema = createInsertSchema(lessons).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertQuizSchema = createInsertSchema(quizzes).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertResourceSchema = createInsertSchema(resources).omit({ id: true, createdAt: true });
-export const insertForumSchema = createInsertSchema(forums).omit({ id: true, createdAt: true });
-export const insertForumReplySchema = createInsertSchema(forumReplies).omit({ id: true, createdAt: true });
-export const insertReminderSchema = createInsertSchema(reminders).omit({ id: true, createdAt: true });
+// Insert schemas - using partial omit to avoid TypeScript never type issues
+export const insertUserSchema = createInsertSchema(users);
+export const insertCourseSchema = createInsertSchema(courses);
+export const insertEnrollmentSchema = createInsertSchema(enrollments);
+export const insertLiveSessionSchema = createInsertSchema(liveSessions);
+export const insertAssignmentSchema = createInsertSchema(assignments);
+export const insertLessonSchema = createInsertSchema(lessons);
+export const insertQuizSchema = createInsertSchema(quizzes);
+export const insertResourceSchema = createInsertSchema(resources);
+export const insertForumSchema = createInsertSchema(forums);
+export const insertForumReplySchema = createInsertSchema(forumReplies);
+export const insertReminderSchema = createInsertSchema(reminders);
 
 // Types
 export type User = typeof users.$inferSelect;

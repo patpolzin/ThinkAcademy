@@ -96,7 +96,7 @@ export class DirectStorage {
   async getCourseContent(courseId: number, contentType: 'lessons' | 'quizzes' | 'resources' | 'forums') {
     const sql = createDbConnection();
     try {
-      let result;
+      let result: any[] = [];
       switch (contentType) {
         case 'lessons':
           result = await sql`
