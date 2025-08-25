@@ -583,8 +583,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Quiz routes
   app.get('/api/courses/:courseId/quizzes', async (req, res) => {
     try {
-      const quizzes = await storage.getQuizzes(req.params.courseId);
-      res.json(quizzes);
+      const quizzes = await directDb.getCourseContent(parseInt(req.params.courseId), 'quizzes');
+      // Parse JSON questions if they exist and are strings
+      const parsedQuizzes = quizzes.map(quiz => ({
+        ...quiz,
+        questions: typeof quiz.questions === 'string' ? JSON.parse(quiz.questions) : (quiz.questions || [])
+      }));
+      res.json(parsedQuizzes);
     } catch (error) {
       console.error('Error fetching quizzes:', error);
       res.status(500).json({ error: 'Failed to fetch quizzes' });

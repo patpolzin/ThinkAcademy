@@ -1064,8 +1064,8 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
                             <p className="text-slate-700 dark:text-slate-300 text-sm mt-1">{quiz.description}</p>
                             <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                               <div className="text-sm text-slate-600 dark:text-slate-400">
-                                <strong>{quiz.questions.length}</strong> questions
-                                {quiz.questions.length > 0 && (
+                                <strong>{(quiz.questions || []).length}</strong> questions
+                                {(quiz.questions || []).length > 0 && Array.isArray(quiz.questions) && (
                                   <span className="ml-2">
                                     • Types: {Array.from(new Set(quiz.questions.map(q => q.type))).join(', ')}
                                   </span>
