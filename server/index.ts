@@ -6,6 +6,30 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add CSP headers to allow Privy authentication
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://auth.privy.io https://unpkg.com https://*.replit.dev; " +
+    "style-src 'self' 'unsafe-inline' https://auth.privy.io; " +
+    "img-src 'self' data: https: blob:; " +
+    "font-src 'self' https: data:; " +
+    "connect-src 'self' https: wss: ws:; " +
+    "frame-src https://auth.privy.io https://*.privy.io; " +
+    "child-src https://auth.privy.io https://*.privy.io; " +
+    "worker-src 'self' blob:; " +
+    "object-src 'none'; " +
+    "base-uri 'self';"
+  );
+  
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
