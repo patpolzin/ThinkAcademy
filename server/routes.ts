@@ -566,6 +566,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reorder lessons
+  app.put('/api/courses/:courseId/lessons/reorder', async (req, res) => {
+    try {
+      const { lessons } = req.body;
+      for (const lesson of lessons) {
+        await directDb.updateLesson(lesson.id, { order: lesson.order_index });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error reordering lessons:', error);
+      res.status(500).json({ error: 'Failed to reorder lessons' });
+    }
+  });
+
   // Quiz routes
   app.get('/api/courses/:courseId/quizzes', async (req, res) => {
     try {
@@ -607,6 +621,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting quiz:', error);
       res.status(500).json({ error: 'Failed to delete quiz' });
+    }
+  });
+
+  // Reorder quizzes
+  app.put('/api/courses/:courseId/quizzes/reorder', async (req, res) => {
+    try {
+      const { quizzes } = req.body;
+      for (const quiz of quizzes) {
+        await directDb.updateQuiz(quiz.id, { order: quiz.order_index });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error reordering quizzes:', error);
+      res.status(500).json({ error: 'Failed to reorder quizzes' });
     }
   });
 

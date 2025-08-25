@@ -234,12 +234,12 @@ export class DirectStorage {
     try {
       const result = await sql`
         UPDATE lessons 
-        SET title = COALESCE(${updates.title}, title),
-            description = COALESCE(${updates.description}, description),
-            content = COALESCE(${updates.content}, content),
-            video_url = COALESCE(${updates.videoUrl}, video_url),
-            order_index = COALESCE(${updates.order}, order_index),
-            duration = COALESCE(${updates.duration}, duration),
+        SET title = COALESCE(${updates.title || null}, title),
+            description = COALESCE(${updates.description || null}, description),
+            content = COALESCE(${updates.content || null}, content),
+            video_url = COALESCE(${updates.videoUrl || null}, video_url),
+            order_index = COALESCE(${updates.order || null}, order_index),
+            duration = COALESCE(${updates.duration || null}, duration),
             updated_at = NOW()
         WHERE id = ${lessonId}
         RETURNING *
@@ -290,12 +290,12 @@ export class DirectStorage {
     try {
       const result = await sql`
         UPDATE quizzes 
-        SET title = COALESCE(${updates.title}, title),
-            description = COALESCE(${updates.description}, description),
-            questions = COALESCE(${JSON.stringify(updates.questions)}, questions),
-            passing_score = COALESCE(${updates.passingScore}, passing_score),
-            time_limit = COALESCE(${updates.timeLimit}, time_limit),
-            order_index = COALESCE(${updates.order}, order_index),
+        SET title = COALESCE(${updates.title || null}, title),
+            description = COALESCE(${updates.description || null}, description),
+            questions = COALESCE(${updates.questions ? JSON.stringify(updates.questions) : null}, questions),
+            passing_score = COALESCE(${updates.passingScore || null}, passing_score),
+            time_limit = COALESCE(${updates.timeLimit || null}, time_limit),
+            order_index = COALESCE(${updates.order || null}, order_index),
             updated_at = NOW()
         WHERE id = ${quizId}
         RETURNING *
@@ -313,11 +313,11 @@ export class DirectStorage {
     try {
       const result = await sql`
         UPDATE resources 
-        SET title = COALESCE(${updates.title}, title),
-            description = COALESCE(${updates.description}, description),
-            file_type = COALESCE(${updates.fileType}, file_type),
-            file_url = COALESCE(${updates.fileUrl}, file_url),
-            file_size = COALESCE(${updates.fileSize}, file_size),
+        SET title = COALESCE(${updates.title || null}, title),
+            description = COALESCE(${updates.description || null}, description),
+            file_type = COALESCE(${updates.fileType || null}, file_type),
+            file_url = COALESCE(${updates.fileUrl || null}, file_url),
+            file_size = COALESCE(${updates.fileSize || null}, file_size),
             is_public = COALESCE(${updates.isPublic}, is_public)
         WHERE id = ${resourceId}
         RETURNING *

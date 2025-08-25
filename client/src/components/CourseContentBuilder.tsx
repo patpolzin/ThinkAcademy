@@ -227,18 +227,61 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
     },
   });
 
+  // Reordering mutations
+  const reorderLessonsMutation = useMutation({
+    mutationFn: ({ lessons }: { lessons: any[] }) => apiRequest(`/api/courses/${courseId}/lessons/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ lessons }),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'lessons'] });
+      toast({ title: "Lessons Reordered", description: "Lesson order has been updated." });
+    },
+  });
+
+  const reorderQuizzesMutation = useMutation({
+    mutationFn: ({ quizzes }: { quizzes: any[] }) => apiRequest(`/api/courses/${courseId}/quizzes/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ quizzes }),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'quizzes'] });
+      toast({ title: "Quizzes Reordered", description: "Quiz order has been updated." });
+    },
+  });
+
   // Content management functions
   const moveLesson = (fromIndex: number, toIndex: number) => {
-    // Note: For now, just trigger a refresh. Order management can be enhanced later.
-    toast({ title: "Reordering", description: "Lesson order updated." });
+    const newLessons = [...contentData.lessons];
+    const [movedLesson] = newLessons.splice(fromIndex, 1);
+    newLessons.splice(toIndex, 0, movedLesson);
+    
+    // Update order_index for all lessons
+    const lessonsWithNewOrder = newLessons.map((lesson, index) => ({
+      ...lesson,
+      order_index: index + 1
+    }));
+    
+    reorderLessonsMutation.mutate({ lessons: lessonsWithNewOrder });
   };
 
   const moveQuiz = (fromIndex: number, toIndex: number) => {
-    toast({ title: "Reordering", description: "Quiz order updated." });
+    const newQuizzes = [...contentData.quizzes];
+    const [movedQuiz] = newQuizzes.splice(fromIndex, 1);
+    newQuizzes.splice(toIndex, 0, movedQuiz);
+    
+    // Update order_index for all quizzes
+    const quizzesWithNewOrder = newQuizzes.map((quiz, index) => ({
+      ...quiz,
+      order_index: index + 1
+    }));
+    
+    reorderQuizzesMutation.mutate({ quizzes: quizzesWithNewOrder });
   };
 
   const moveResource = (fromIndex: number, toIndex: number) => {
-    toast({ title: "Reordering", description: "Resource order updated." });
+    // For resources, just update locally since they don't have order_index in the current schema
+    toast({ title: "Reordering", description: "Resource reordering coming soon." });
   };
 
   const deleteLesson = (lesson: any, index: number) => {
