@@ -165,7 +165,7 @@ export class DirectStorage {
       };
 
       const result = await sql`
-        INSERT INTO lessons (course_id, title, description, content, video_url, "order", duration)
+        INSERT INTO lessons (course_id, title, description, content, video_url, order_index, duration)
         VALUES (${safeData.courseId}, ${safeData.title}, ${safeData.description}, ${safeData.content}, ${safeData.videoUrl}, ${safeData.order}, ${safeData.duration})
         RETURNING *
       `;
@@ -191,7 +191,7 @@ export class DirectStorage {
       };
 
       const result = await sql`
-        INSERT INTO quizzes (course_id, title, description, questions, passing_score, time_limit, "order")
+        INSERT INTO quizzes (course_id, title, description, questions, passing_score, time_limit, order_index)
         VALUES (${safeData.courseId}, ${safeData.title}, ${safeData.description}, ${JSON.stringify(safeData.questions)}, ${safeData.passingScore}, ${safeData.timeLimit}, ${safeData.order})
         RETURNING *
       `;
@@ -213,12 +213,12 @@ export class DirectStorage {
         type: resourceData.type || 'document',
         url: resourceData.url || null,
         fileSize: resourceData.fileSize || null,
-        order: resourceData.order || 0
+        isPublic: resourceData.isPublic || false
       };
 
       const result = await sql`
-        INSERT INTO resources (course_id, title, description, type, url, file_size, "order")
-        VALUES (${safeData.courseId}, ${safeData.title}, ${safeData.description}, ${safeData.type}, ${safeData.url}, ${safeData.fileSize}, ${safeData.order})
+        INSERT INTO resources (course_id, title, description, file_url, file_type, file_size, is_public)
+        VALUES (${safeData.courseId}, ${safeData.title}, ${safeData.description}, ${safeData.url}, ${safeData.type}, ${safeData.fileSize}, ${safeData.isPublic || false})
         RETURNING *
       `;
       await sql.end();
@@ -238,7 +238,7 @@ export class DirectStorage {
             description = COALESCE(${updates.description}, description),
             content = COALESCE(${updates.content}, content),
             video_url = COALESCE(${updates.videoUrl}, video_url),
-            "order" = COALESCE(${updates.order}, "order"),
+            order_index = COALESCE(${updates.order}, order_index),
             duration = COALESCE(${updates.duration}, duration),
             updated_at = NOW()
         WHERE id = ${lessonId}
@@ -295,7 +295,7 @@ export class DirectStorage {
             questions = COALESCE(${JSON.stringify(updates.questions)}, questions),
             passing_score = COALESCE(${updates.passingScore}, passing_score),
             time_limit = COALESCE(${updates.timeLimit}, time_limit),
-            "order" = COALESCE(${updates.order}, "order"),
+            order_index = COALESCE(${updates.order}, order_index),
             updated_at = NOW()
         WHERE id = ${quizId}
         RETURNING *
@@ -315,10 +315,10 @@ export class DirectStorage {
         UPDATE resources 
         SET title = COALESCE(${updates.title}, title),
             description = COALESCE(${updates.description}, description),
-            type = COALESCE(${updates.type}, type),
-            url = COALESCE(${updates.url}, url),
+            file_type = COALESCE(${updates.fileType}, file_type),
+            file_url = COALESCE(${updates.fileUrl}, file_url),
             file_size = COALESCE(${updates.fileSize}, file_size),
-            "order" = COALESCE(${updates.order}, "order")
+            is_public = COALESCE(${updates.isPublic}, is_public)
         WHERE id = ${resourceId}
         RETURNING *
       `;

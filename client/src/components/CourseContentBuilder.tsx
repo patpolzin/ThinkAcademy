@@ -198,8 +198,8 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
         description: resourceData.description,
         type: resourceData.fileType,
         url: resourceData.fileUrl,
-        courseId, 
-        order: contentData.resources.length + 1
+        isPublic: resourceData.isPublic || false,
+        courseId
       }),
     }),
     onSuccess: () => {
