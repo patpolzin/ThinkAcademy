@@ -29,7 +29,7 @@ function parseSupabaseUrl(url: string) {
     database,
     username,
     password: decodeURIComponent(password), // Decode any URL-encoded characters
-    ssl: 'require',
+    ssl: { rejectUnauthorized: false },
     max: 1,
     idle_timeout: 20,
     connect_timeout: 60,
