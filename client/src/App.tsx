@@ -34,20 +34,30 @@ function App() {
   const AppContent = (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WalletProvider>
-          <Toaster />
-          <Router />
-        </WalletProvider>
+        <PrivyProvider
+          appId={PRIVY_APP_ID}
+          config={{
+            appearance: {
+              theme: 'dark',
+              accentColor: '#06B6D4',
+              logo: 'https://replit.com/public/images/logo.png',
+            },
+            loginMethods: ['email', 'wallet'],
+            embeddedWallets: {
+              createOnLogin: 'all-users',
+            },
+          }}
+        >
+          <WalletProvider>
+            <Toaster />
+            <Router />
+          </WalletProvider>
+        </PrivyProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
 
-  // MetaMask authentication is fully functional
-  // Privy email authentication requires additional Replit configuration
-  // For Privy to work on Replit, contact Replit support to adjust CSP headers
-  // that allow framing from auth.privy.io
-  
-  console.log('Running with MetaMask authentication - Privy requires CSP header changes');
+  console.log('Privy authentication configured with App ID:', PRIVY_APP_ID);
   return AppContent;
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Mail, Wallet, BookOpen, Play, Unlock, Shield } from 'lucide-react';
 import { useWallet } from './WalletProvider';
 import { usePrivy } from '@privy-io/react-auth';
@@ -10,24 +10,36 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { connectWallet, isConnected } = useWallet();
+  const { connectWallet, isConnected, setPrivyConnection } = useWallet();
   
-  // Safe Privy hook usage with fallback
-  let privyLogin: (() => void) | null = null;
-  let privyAuthenticated = false;
-  let privyUser = null;
-  
-  try {
-    const privyState = usePrivy();
-    privyLogin = privyState.login;
-    privyAuthenticated = privyState.authenticated;
-    privyUser = privyState.user;
-  } catch (error) {
-    console.log('Privy not available:', error);
-  }
+  const { login: privyLogin, authenticated: privyAuthenticated, user: privyUser } = usePrivy();
   
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMethod, setLoadingMethod] = useState<'wallet' | 'email' | null>(null);
+
+  // Handle Privy authentication success
+  useEffect(() => {
+    if (privyAuthenticated && privyUser && isOpen) {
+      console.log('Privy authentication successful:', privyUser);
+      
+      // Extract wallet address from Privy user
+      let walletAddress = null;
+      
+      if (privyUser.wallet?.address) {
+        walletAddress = privyUser.wallet.address;
+      } else if (privyUser.linkedAccounts) {
+        const walletAccount = privyUser.linkedAccounts.find(account => account.type === 'wallet');
+        if (walletAccount && 'address' in walletAccount) {
+          walletAddress = walletAccount.address;
+        }
+      }
+      
+      if (walletAddress) {
+        setPrivyConnection(walletAddress);
+        onClose();
+      }
+    }
+  }, [privyAuthenticated, privyUser, isOpen, setPrivyConnection, onClose]);
 
   const handleWalletConnect = async () => {
     setIsLoading(true);
@@ -50,19 +62,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setLoadingMethod('email');
     
     try {
-      if (privyLogin) {
-        privyLogin();
-        if (privyAuthenticated) {
-          console.log('Privy authentication successful:', privyUser);
-          onClose();
-        }
-      } else {
-        console.log('Privy authentication requires CSP header configuration on Replit.');
-        alert('Email authentication with Privy requires additional setup.\n\nContact Replit support to modify Content Security Policy (CSP) headers to allow framing from auth.privy.io.\n\nFor now, please use MetaMask wallet connection.');
-      }
+      await privyLogin();
+      console.log('Privy authentication initiated');
+      // The modal will close automatically when authentication completes
     } catch (error) {
       console.error('Privy authentication failed:', error);
-      alert('Authentication failed. Please check your Privy configuration.');
+      alert('Authentication failed. Please try again or use wallet connection.');
     } finally {
       setIsLoading(false);
       setLoadingMethod(null);

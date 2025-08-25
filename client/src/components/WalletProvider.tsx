@@ -7,6 +7,7 @@ interface WalletContextType {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   updateTokenBalances: (balances: Record<string, string>) => void;
+  setPrivyConnection: (address: string) => void;
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
@@ -52,8 +53,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setTokenBalances(balances);
   };
 
+  const setPrivyConnection = (privyAddress: string) => {
+    setAddress(privyAddress);
+    setIsConnected(true);
+    console.log('Privy wallet connected:', privyAddress);
+  };
+
   useEffect(() => {
-    // Check if already connected
+    // Check if already connected via MetaMask
     if (typeof window.ethereum !== 'undefined') {
       window.ethereum.request({ method: 'eth_accounts' })
         .then((accounts: string[]) => {
@@ -72,7 +79,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     tokenBalances,
     connectWallet,
     disconnectWallet,
-    updateTokenBalances
+    updateTokenBalances,
+    setPrivyConnection
   };
 
   return (
