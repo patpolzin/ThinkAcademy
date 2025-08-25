@@ -678,6 +678,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Course publishing endpoint
+  app.put('/api/courses/:courseId/publish', async (req, res) => {
+    try {
+      const courseId = parseInt(req.params.courseId);
+      const { isActive } = req.body;
+      
+      const course = await directDb.updateCourse(courseId.toString(), { isActive });
+      res.json(course);
+    } catch (error) {
+      console.error('Error publishing course:', error);
+      res.status(500).json({ error: 'Failed to publish course' });
+    }
+  });
+
   // Enrollment management routes
   // Removed duplicate enrollment route - using the one with data conversion above
 

@@ -403,6 +403,29 @@ export class DirectStorage {
     }
   }
 
+  async updateCourse(courseId: string, updates: any) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`
+        UPDATE courses 
+        SET title = COALESCE(${updates.title}, title),
+            description = COALESCE(${updates.description}, description),
+            category = COALESCE(${updates.category}, category),
+            difficulty = COALESCE(${updates.difficulty}, difficulty),
+            token_requirements = COALESCE(${JSON.stringify(updates.tokenRequirements)}, token_requirements),
+            is_active = COALESCE(${updates.isActive}, is_active),
+            updated_at = NOW()
+        WHERE id = ${courseId}
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error updating course:', error);
+      throw error;
+    }
+  }
+
   async getLiveSessions() {
     const sql = createDbConnection();
     try {

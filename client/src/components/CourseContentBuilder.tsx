@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { 
   BookOpen, Plus, Save, Eye, Edit2, Trash2, 
-  Clock, Award, FileText, Video, Users, CheckCircle, ExternalLink, Upload
+  Clock, Award, FileText, Video, Users, CheckCircle, ExternalLink, Upload, Rocket
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -75,6 +75,18 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Course publish mutation
+  const publishCourseMutation = useMutation({
+    mutationFn: () => apiRequest(`/api/courses/${courseId}/publish`, {
+      method: 'PUT',
+      body: JSON.stringify({ isActive: true }),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+      toast({ title: "Course Published", description: "Course is now live and available to students." });
+    },
+  });
+
   // Load content from API
   const { data: lessons = [] } = useQuery({
     queryKey: ['/api/courses', courseId, 'lessons'],
@@ -101,11 +113,19 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
     resources: resources?.length ? resources : (courseData?.resources || []),
   };
 
+  // Check if course has content for publishing
+  const hasContent = contentData.lessons.length > 0 || contentData.quizzes.length > 0 || contentData.resources.length > 0;
+
   // Mutations for lessons
   const createLessonMutation = useMutation({
     mutationFn: (lessonData: any) => apiRequest(`/api/courses/${courseId}/lessons`, {
       method: 'POST',
-      body: JSON.stringify({ ...lessonData, courseId, orderIndex: contentData.lessons.length }),
+      body: JSON.stringify({ 
+        ...lessonData, 
+        courseId, 
+        order: contentData.lessons.length + 1,
+        duration: lessonData.duration || 0
+      }),
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'lessons'] });
@@ -136,7 +156,13 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
   const createQuizMutation = useMutation({
     mutationFn: (quizData: any) => apiRequest(`/api/courses/${courseId}/quizzes`, {
       method: 'POST',
-      body: JSON.stringify({ ...quizData, courseId, orderIndex: contentData.quizzes.length }),
+      body: JSON.stringify({ 
+        ...quizData, 
+        courseId, 
+        order: contentData.quizzes.length + 1,
+        attempts: quizData.attempts || 3,
+        passingScore: quizData.passingScore || 70
+      }),
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'quizzes'] });
@@ -167,7 +193,14 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
   const createResourceMutation = useMutation({
     mutationFn: (resourceData: any) => apiRequest(`/api/courses/${courseId}/resources`, {
       method: 'POST',
-      body: JSON.stringify({ ...resourceData, courseId }),
+      body: JSON.stringify({ 
+        title: resourceData.title,
+        description: resourceData.description,
+        type: resourceData.fileType,
+        url: resourceData.fileUrl,
+        courseId, 
+        order: contentData.resources.length + 1
+      }),
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/courses', courseId, 'resources'] });
@@ -764,6 +797,27 @@ export function CourseContentBuilder({ courseId, courseData, onUpdate }: CourseC
 
   return (
     <div className="space-y-6">
+      {/* Course Publish Section */}
+      {hasContent && (
+        <div className="flex justify-end mb-4">
+          <Button 
+            onClick={() => publishCourseMutation.mutate()}
+            disabled={publishCourseMutation.isPending}
+            className="bg-green-600 hover:bg-green-700 text-white animate-button"
+            data-testid="button-publish-course"
+          >
+            {publishCourseMutation.isPending ? (
+              <>Publishing...</>
+            ) : (
+              <>
+                <Rocket className="w-4 h-4 mr-2" />
+                Publish Course
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
       <Tabs defaultValue="lessons" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="lessons" className="text-slate-700 dark:text-slate-300">
