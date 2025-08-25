@@ -399,6 +399,270 @@ export function CourseContentBuilder({ courseData, onUpdate }: CourseContentBuil
     );
   };
 
+  // Modal for creating/editing quizzes
+  const QuizModal = () => {
+    const isEdit = activeModal?.mode === 'edit';
+    const quizData = activeModal?.data || {};
+    const [formData, setFormData] = useState({
+      title: quizData.title || '',
+      description: quizData.description || '',
+      timeLimit: quizData.timeLimit || 0,
+      attempts: quizData.attempts || 3,
+      passingScore: quizData.passingScore || 70,
+      questions: quizData.questions || [{ 
+        question: '', 
+        options: ['', '', '', ''], 
+        correctAnswer: 0, 
+        explanation: '', 
+        type: 'multiple-choice' as const 
+      }],
+    });
+
+    const addQuestion = () => {
+      setFormData({
+        ...formData,
+        questions: [...formData.questions, {
+          question: '',
+          options: ['', '', '', ''],
+          correctAnswer: 0,
+          explanation: '',
+          type: 'multiple-choice' as const
+        }]
+      });
+    };
+
+    const updateQuestion = (index: number, updates: Partial<ContentQuestion>) => {
+      const newQuestions = [...formData.questions];
+      newQuestions[index] = { ...newQuestions[index], ...updates };
+      setFormData({ ...formData, questions: newQuestions });
+    };
+
+    const removeQuestion = (index: number) => {
+      const newQuestions = formData.questions.filter((_: ContentQuestion, i: number) => i !== index);
+      setFormData({ ...formData, questions: newQuestions });
+    };
+
+    const updateQuestionOption = (questionIndex: number, optionIndex: number, value: string) => {
+      const newQuestions = [...formData.questions];
+      const newOptions = [...newQuestions[questionIndex].options];
+      newOptions[optionIndex] = value;
+      newQuestions[questionIndex] = { ...newQuestions[questionIndex], options: newOptions };
+      setFormData({ ...formData, questions: newQuestions });
+    };
+
+    const handleSave = () => {
+      const newQuiz = {
+        ...formData,
+      };
+
+      if (isEdit) {
+        const newQuizzes = [...courseData.quizzes];
+        newQuizzes[quizData.index] = newQuiz;
+        onUpdate({ ...courseData, quizzes: newQuizzes });
+      } else {
+        onUpdate({ ...courseData, quizzes: [...courseData.quizzes, newQuiz] });
+      }
+
+      setActiveModal(null);
+      toast({
+        title: isEdit ? "Quiz Updated" : "Quiz Created",
+        description: `Quiz "${formData.title}" has been ${isEdit ? 'updated' : 'added to the course'}.`,
+      });
+    };
+
+    return (
+      <Dialog open={activeModal?.type === 'quiz'} onOpenChange={() => setActiveModal(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{isEdit ? 'Edit Quiz' : 'Create New Quiz'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="quiz-title">Quiz Title</Label>
+                <Input
+                  id="quiz-title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Chapter 1 Quiz"
+                  data-testid="input-quiz-title"
+                />
+              </div>
+              <div>
+                <Label htmlFor="quiz-time-limit">Time Limit (minutes, 0 = unlimited)</Label>
+                <Input
+                  id="quiz-time-limit"
+                  type="number"
+                  value={formData.timeLimit}
+                  onChange={(e) => setFormData({ ...formData, timeLimit: parseInt(e.target.value) || 0 })}
+                  min="0"
+                  max="180"
+                  data-testid="input-quiz-time-limit"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="quiz-description">Description</Label>
+              <Textarea
+                id="quiz-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Test your understanding of blockchain fundamentals"
+                data-testid="textarea-quiz-description"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="quiz-attempts">Allowed Attempts</Label>
+                <Input
+                  id="quiz-attempts"
+                  type="number"
+                  value={formData.attempts}
+                  onChange={(e) => setFormData({ ...formData, attempts: parseInt(e.target.value) || 1 })}
+                  min="1"
+                  max="10"
+                  data-testid="input-quiz-attempts"
+                />
+              </div>
+              <div>
+                <Label htmlFor="quiz-passing-score">Passing Score (%)</Label>
+                <Input
+                  id="quiz-passing-score"
+                  type="number"
+                  value={formData.passingScore}
+                  onChange={(e) => setFormData({ ...formData, passingScore: parseInt(e.target.value) || 70 })}
+                  min="0"
+                  max="100"
+                  data-testid="input-quiz-passing-score"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label className="text-lg font-semibold">Questions</Label>
+                <Button 
+                  type="button" 
+                  onClick={addQuestion} 
+                  variant="outline" 
+                  size="sm"
+                  data-testid="button-add-question"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Question
+                </Button>
+              </div>
+
+              {formData.questions.map((question: ContentQuestion, qIndex: number) => (
+                <Card key={qIndex} className="p-4">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <Label className="font-medium">Question {qIndex + 1}</Label>
+                      {formData.questions.length > 1 && (
+                        <Button
+                          type="button"
+                          onClick={() => removeQuestion(qIndex)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                          data-testid={`button-remove-question-${qIndex}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor={`question-${qIndex}`}>Question Text</Label>
+                      <Textarea
+                        id={`question-${qIndex}`}
+                        value={question.question}
+                        onChange={(e) => updateQuestion(qIndex, { question: e.target.value })}
+                        placeholder="What is the primary purpose of blockchain technology?"
+                        data-testid={`textarea-question-${qIndex}`}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Question Type</Label>
+                      <Select 
+                        value={question.type} 
+                        onValueChange={(value: 'multiple-choice' | 'true-false') => 
+                          updateQuestion(qIndex, { 
+                            type: value,
+                            options: value === 'true-false' ? ['True', 'False'] : ['', '', '', ''],
+                            correctAnswer: 0
+                          })
+                        }
+                      >
+                        <SelectTrigger data-testid={`select-question-type-${qIndex}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                          <SelectItem value="true-false">True/False</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>Answer Options</Label>
+                      <div className="space-y-2">
+                        {question.options.map((option: string, oIndex: number) => (
+                          <div key={oIndex} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`correct-${qIndex}`}
+                              checked={question.correctAnswer === oIndex}
+                              onChange={() => updateQuestion(qIndex, { correctAnswer: oIndex })}
+                              data-testid={`radio-correct-answer-${qIndex}-${oIndex}`}
+                            />
+                            <Input
+                              value={option}
+                              onChange={(e) => updateQuestionOption(qIndex, oIndex, e.target.value)}
+                              placeholder={`Option ${oIndex + 1}`}
+                              disabled={question.type === 'true-false'}
+                              data-testid={`input-option-${qIndex}-${oIndex}`}
+                            />
+                            <span className="text-sm text-slate-500">
+                              {question.correctAnswer === oIndex ? '(Correct)' : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor={`explanation-${qIndex}`}>Explanation (Optional)</Label>
+                      <Textarea
+                        id={`explanation-${qIndex}`}
+                        value={question.explanation || ''}
+                        onChange={(e) => updateQuestion(qIndex, { explanation: e.target.value })}
+                        placeholder="Explain why this is the correct answer..."
+                        data-testid={`textarea-explanation-${qIndex}`}
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActiveModal(null)}>Cancel</Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={!formData.title.trim() || formData.questions.some((q: ContentQuestion) => !q.question.trim() || q.options.some((o: string) => !o.trim()))}
+            >
+              {isEdit ? 'Update' : 'Create'} Quiz
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="lessons" className="w-full">
@@ -519,6 +783,133 @@ export function CourseContentBuilder({ courseData, onUpdate }: CourseContentBuil
                               onClick={() => deleteLesson(index)}
                               className="text-red-600 hover:text-red-700"
                               data-testid={`button-delete-lesson-${index}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="quizzes" className="tab-content mt-6">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Quizzes</h3>
+              <Button 
+                onClick={() => setActiveModal({ type: 'quiz', mode: 'create', data: null })}
+                className="btn-primary animate-button"
+                data-testid="button-create-quiz"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Quiz
+              </Button>
+            </div>
+            
+            {courseData.quizzes.length === 0 ? (
+              <Card className="card-content border-dashed border-2 border-slate-300 dark:border-slate-600">
+                <CardContent className="p-8 text-center">
+                  <Award className="w-12 h-12 mx-auto mb-4 text-slate-400" />
+                  <h4 className="text-lg font-medium text-slate-600 dark:text-slate-400 mb-2">No quizzes yet</h4>
+                  <p className="text-slate-500 dark:text-slate-500 mb-4">Create assessments to test student knowledge</p>
+                  <Button 
+                    onClick={() => setActiveModal({ type: 'quiz', mode: 'create', data: null })}
+                    variant="outline"
+                    data-testid="button-create-first-quiz"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Quiz
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              courseData.quizzes.map((quiz, index) => (
+                <Card key={index} className="card-content animate-card animate-fade-in group">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex flex-col gap-2">
+                        <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center animate-bounce-subtle">
+                          <Award className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                        </div>
+                        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {index > 0 && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => moveQuiz(index, index - 1)}
+                              className="h-6 w-6 p-0"
+                              data-testid={`button-move-quiz-up-${index}`}
+                            >
+                              ↑
+                            </Button>
+                          )}
+                          {index < courseData.quizzes.length - 1 && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => moveQuiz(index, index + 1)}
+                              className="h-6 w-6 p-0"
+                              data-testid={`button-move-quiz-down-${index}`}
+                            >
+                              ↓
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="font-semibold text-slate-900 dark:text-slate-50">{quiz.title}</h4>
+                            <p className="text-slate-700 dark:text-slate-300 text-sm mt-1">{quiz.description}</p>
+                            <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                              <div className="text-sm text-slate-600 dark:text-slate-400">
+                                <strong>{quiz.questions.length}</strong> questions
+                                {quiz.questions.length > 0 && (
+                                  <span className="ml-2">
+                                    • Types: {Array.from(new Set(quiz.questions.map(q => q.type))).join(', ')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                <Award className="w-3 h-3 mr-1" />
+                                {quiz.questions.length} questions
+                              </Badge>
+                              {quiz.timeLimit && quiz.timeLimit > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {quiz.timeLimit} min
+                                </Badge>
+                              )}
+                              <Badge variant="secondary" className="text-xs">
+                                Pass: {quiz.passingScore}%
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                {quiz.attempts} attempts
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setActiveModal({ type: 'quiz', mode: 'edit', data: { ...quiz, index } })}
+                              data-testid={`button-edit-quiz-${index}`}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => deleteQuiz(index)}
+                              className="text-red-600 hover:text-red-700"
+                              data-testid={`button-delete-quiz-${index}`}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -663,6 +1054,7 @@ export function CourseContentBuilder({ courseData, onUpdate }: CourseContentBuil
 
       {/* Modals */}
       <LessonModal />
+      <QuizModal />
       <ResourceModal />
     </div>
   );
