@@ -324,6 +324,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <CourseContentBuilder 
+                  courseId={3}
                   courseData={{
                     lessons: [],
                     quizzes: [],
