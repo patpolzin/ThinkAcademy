@@ -203,7 +203,7 @@ export class DatabaseStorage implements IStorage {
     totalCertificatesEarned: number;
     recentEnrollments: Enrollment[];
   }> {
-    const userEnrollments = await db.select().from(enrollments).where(eq(enrollments.userId, userId));
+    const userEnrollments = await db.select().from(enrollments).where(eq(enrollments.userId, parseInt(userId)));
     const completedCourses = userEnrollments.filter(e => (e.progress || 0) >= 100);
     const certificatesEarned = userEnrollments.filter(e => e.certificateIssued);
     const recentEnrollments = userEnrollments.slice(-5);
@@ -250,7 +250,7 @@ export class DatabaseStorage implements IStorage {
       let courseEnrollments: any[] = [];
       if (courseIds.length > 0) {
         for (const courseId of courseIds) {
-          const enrolls = await db.select().from(enrollments).where(eq(enrollments.courseId, courseId));
+          const enrolls = await db.select().from(enrollments).where(eq(enrollments.courseId, parseInt(courseId)));
           courseEnrollments.push(...enrolls);
         }
       }
@@ -287,7 +287,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCourse(id: string): Promise<Course | undefined> {
-    const [course] = await db.select().from(courses).where(eq(courses.id, id));
+    const [course] = await db.select().from(courses).where(eq(courses.id, parseInt(id)));
     return course || undefined;
   }
 
@@ -317,7 +317,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEnrollments(userId: string): Promise<Enrollment[]> {
-    return await db.select().from(enrollments).where(eq(enrollments.userId, userId));
+    return await db.select().from(enrollments).where(eq(enrollments.userId, parseInt(userId)));
   }
 
   async getEnrollmentsByUser(userId: string): Promise<Enrollment[]> {
@@ -325,13 +325,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEnrollmentsByCourse(courseId: string): Promise<Enrollment[]> {
-    return await db.select().from(enrollments).where(eq(enrollments.courseId, courseId));
+    return await db.select().from(enrollments).where(eq(enrollments.courseId, parseInt(courseId)));
   }
 
   async updateCourse(id: string, updates: Partial<InsertCourse>): Promise<Course> {
     const [course] = await db.update(courses)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(courses.id, id))
+      .where(eq(courses.id, parseInt(id)))
       .returning();
     return course;
   }
@@ -339,7 +339,7 @@ export class DatabaseStorage implements IStorage {
   async deleteCourse(id: string): Promise<void> {
     await db.update(courses)
       .set({ isActive: false })
-      .where(eq(courses.id, id));
+      .where(eq(courses.id, parseInt(id)));
   }
 
   async updateLiveSessionStatus(id: string, status: 'scheduled' | 'live' | 'ended', attendees?: number): Promise<LiveSession> {
@@ -350,7 +350,7 @@ export class DatabaseStorage implements IStorage {
     
     const [session] = await db.update(liveSessions)
       .set(updateData)
-      .where(eq(liveSessions.id, id))
+      .where(eq(liveSessions.id, parseInt(id)))
       .returning();
     return session;
   }
@@ -375,7 +375,7 @@ export class DatabaseStorage implements IStorage {
         lastAccessedAt: new Date(),
         ...(progress >= 100 ? { certificateIssued: true, certificateIssuedAt: new Date() } : {})
       })
-      .where(eq(enrollments.id, enrollmentId))
+      .where(eq(enrollments.id, parseInt(enrollmentId)))
       .returning();
     return enrollment;
   }
@@ -386,7 +386,7 @@ export class DatabaseStorage implements IStorage {
         certificateIssued: true,
         certificateIssuedAt: new Date()
       })
-      .where(eq(enrollments.id, enrollmentId))
+      .where(eq(enrollments.id, parseInt(enrollmentId)))
       .returning();
     return enrollment;
   }
@@ -396,7 +396,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLiveSession(id: string): Promise<LiveSession | undefined> {
-    const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, id));
+    const [session] = await db.select().from(liveSessions).where(eq(liveSessions.id, parseInt(id)));
     return session || undefined;
   }
 
@@ -409,7 +409,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAssignments(courseId: string): Promise<Assignment[]> {
-    return await db.select().from(assignments).where(eq(assignments.courseId, courseId));
+    return await db.select().from(assignments).where(eq(assignments.courseId, parseInt(courseId)));
   }
 
   async createAssignment(assignmentData: InsertAssignment): Promise<Assignment> {
@@ -437,7 +437,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserReminders(userId: string): Promise<Reminder[]> {
-    return await db.select().from(reminders).where(and(eq(reminders.userId, userId), eq(reminders.isActive, true)));
+    return await db.select().from(reminders).where(eq(reminders.userId, parseInt(userId)));
   }
 
   async createReminder(reminderData: InsertReminder): Promise<Reminder> {
@@ -449,14 +449,14 @@ export class DatabaseStorage implements IStorage {
       return reminder;
     } catch (error) {
       console.error('Database error creating reminder:', error);
-      throw new Error(`Failed to create reminder: ${error.message}`);
+      throw new Error(`Failed to create reminder: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   async deleteReminder(id: string): Promise<void> {
     await db.update(reminders)
-      .set({ isActive: false })
-      .where(eq(reminders.id, id));
+      .set({ isSent: true })
+      .where(eq(reminders.id, parseInt(id)));
   }
 
   async getAnalytics(): Promise<{
@@ -472,7 +472,7 @@ export class DatabaseStorage implements IStorage {
       const allEnrollments = await db.select().from(enrollments);
       
       const avgProgress = allEnrollments.length > 0 ? 
-        allEnrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / allEnrollments.length : 0;
+        allEnrollments.reduce((sum, e) => sum + (e.progressPercentage || 0), 0) / allEnrollments.length : 0;
       
       return {
         totalStudents: allUsers.length,
@@ -494,11 +494,11 @@ export class DatabaseStorage implements IStorage {
 
   // Lesson management
   async getLessons(courseId: string): Promise<Lesson[]> {
-    return await db.select().from(lessons).where(eq(lessons.courseId, courseId));
+    return await db.select().from(lessons).where(eq(lessons.courseId, parseInt(courseId)));
   }
 
   async getLesson(id: string): Promise<Lesson | undefined> {
-    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, id));
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, parseInt(id)));
     return lesson || undefined;
   }
 
@@ -510,13 +510,13 @@ export class DatabaseStorage implements IStorage {
   async updateLesson(id: string, updates: Partial<InsertLesson>): Promise<Lesson> {
     const [lesson] = await db.update(lessons)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(lessons.id, id))
+      .where(eq(lessons.id, parseInt(id)))
       .returning();
     return lesson;
   }
 
   async deleteLesson(id: string): Promise<void> {
-    await db.delete(lessons).where(eq(lessons.id, id));
+    await db.delete(lessons).where(eq(lessons.id, parseInt(id)));
   }
 
   async updateLessonProgress(userId: string, lessonId: string, watchTime: number, isCompleted: boolean): Promise<void> {
@@ -545,11 +545,11 @@ export class DatabaseStorage implements IStorage {
 
   // Quiz management
   async getQuizzes(courseId: string): Promise<Quiz[]> {
-    return await db.select().from(quizzes).where(eq(quizzes.courseId, courseId));
+    return await db.select().from(quizzes).where(eq(quizzes.courseId, parseInt(courseId)));
   }
 
   async getQuiz(id: string): Promise<Quiz | undefined> {
-    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, id));
+    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, parseInt(id)));
     return quiz || undefined;
   }
 
@@ -561,13 +561,13 @@ export class DatabaseStorage implements IStorage {
   async updateQuiz(id: string, updates: Partial<InsertQuiz>): Promise<Quiz> {
     const [quiz] = await db.update(quizzes)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(quizzes.id, id))
+      .where(eq(quizzes.id, parseInt(id)))
       .returning();
     return quiz;
   }
 
   async deleteQuiz(id: string): Promise<void> {
-    await db.delete(quizzes).where(eq(quizzes.id, id));
+    await db.delete(quizzes).where(eq(quizzes.id, parseInt(id)));
   }
 
   async submitQuizResult(userId: string, quizId: string, answers: Record<string, string>, score: number, totalQuestions: number, isPassed: boolean): Promise<QuizResult> {
@@ -589,11 +589,11 @@ export class DatabaseStorage implements IStorage {
 
   // Resource management
   async getResources(courseId: string): Promise<Resource[]> {
-    return await db.select().from(resources).where(eq(resources.courseId, courseId));
+    return await db.select().from(resources).where(eq(resources.courseId, parseInt(courseId)));
   }
 
   async getResource(id: string): Promise<Resource | undefined> {
-    const [resource] = await db.select().from(resources).where(eq(resources.id, id));
+    const [resource] = await db.select().from(resources).where(eq(resources.id, parseInt(id)));
     return resource || undefined;
   }
 
@@ -605,13 +605,13 @@ export class DatabaseStorage implements IStorage {
   async updateResource(id: string, updates: Partial<InsertResource>): Promise<Resource> {
     const [resource] = await db.update(resources)
       .set(updates)
-      .where(eq(resources.id, id))
+      .where(eq(resources.id, parseInt(id)))
       .returning();
     return resource;
   }
 
   async deleteResource(id: string): Promise<void> {
-    await db.delete(resources).where(eq(resources.id, id));
+    await db.delete(resources).where(eq(resources.id, parseInt(id)));
   }
 
   // Forum replies
@@ -648,17 +648,16 @@ export class DatabaseStorage implements IStorage {
   // Enrollment management
   async enrollUser(userId: string, courseId: string): Promise<Enrollment> {
     const existing = await db.select().from(enrollments)
-      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+      .where(and(eq(enrollments.userId, parseInt(userId)), eq(enrollments.courseId, parseInt(courseId))));
     
     if (existing.length > 0) {
       throw new Error('User is already enrolled in this course');
     }
 
     const [enrollment] = await db.insert(enrollments).values({
-      userId,
-      courseId,
-      progress: 0,
-      isCompleted: false,
+      userId: parseInt(userId),
+      courseId: parseInt(courseId),
+      progressPercentage: 0,
       certificateIssued: false
     }).returning();
     
@@ -667,12 +666,12 @@ export class DatabaseStorage implements IStorage {
 
   async unenrollUser(userId: string, courseId: string): Promise<void> {
     await db.delete(enrollments)
-      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+      .where(and(eq(enrollments.userId, parseInt(userId)), eq(enrollments.courseId, parseInt(courseId))));
   }
 
   async checkEnrollment(userId: string, courseId: string): Promise<boolean> {
     const existing = await db.select().from(enrollments)
-      .where(and(eq(enrollments.userId, userId), eq(enrollments.courseId, courseId)));
+      .where(and(eq(enrollments.userId, parseInt(userId)), eq(enrollments.courseId, parseInt(courseId))));
     return existing.length > 0;
   }
 }
