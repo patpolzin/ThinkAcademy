@@ -10,7 +10,7 @@ import ProfileModal from "@/components/ProfileModal";
 import AuthModal from "@/components/AuthModal";
 import { useWallet } from "@/components/WalletProvider";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard, User, Plus, ChevronRight } from "lucide-react";
+import { BookOpen, TrendingUp, Award, Users, Settings, Video, LayoutDashboard, User, Plus, ChevronRight, Edit, Copy, Trash2, Save, FolderOpen, Eye } from "lucide-react";
 import AdminPanel from "@/components/AdminPanel";
 import InstructorPanel from "@/components/InstructorPanel";
 import { CourseContentBuilder } from "@/components/CourseContentBuilder";
@@ -18,6 +18,7 @@ import { GameifiedProgress, calculateUserStats, generateMockAchievements } from 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -48,6 +49,12 @@ export default function Dashboard() {
     enabled: isConnected && !!address,
   });
 
+  // Get instructor's courses
+  const { data: instructorCourses = [] } = useQuery({
+    queryKey: ['/api/instructor/courses', address],
+    enabled: isConnected && !!address && userData?.isInstructor,
+  });
+
   const user = userData || {
     id: address,
     displayName: '',
@@ -76,9 +83,10 @@ export default function Dashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'live', label: 'Live Sessions', icon: Video },
+    ...(userData?.isInstructor ? [{ id: 'mycourses', label: 'My Courses', icon: FolderOpen }] : []),
     ...(userData?.isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
     ...(userData?.isInstructor ? [{ id: 'instructor', label: 'Instructor', icon: Users }] : []),
-    { id: 'test', label: 'Course Creation Test', icon: Plus },
+    { id: 'test', label: 'New Course', icon: Plus },
   ];
 
   const stats = [
@@ -307,6 +315,82 @@ export default function Dashboard() {
 
 
 
+      case 'mycourses':
+        if (!userData?.isInstructor) return null;
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-high-contrast">My Courses</h2>
+              <p className="text-medium-contrast">Manage and edit your courses</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {instructorCourses.map((course: any) => (
+                <Card key={course.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">{course.title}</CardTitle>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit Course
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Copy className="w-4 h-4 mr-2" />
+                            Duplicate Course
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Eye className="w-4 h-4 mr-2" />
+                            {course.isActive ? 'Hide Course' : 'Show Course'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Course
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600 mb-4 line-clamp-2">{course.description}</p>
+                    <div className="flex justify-between items-center">
+                      <div className="flex gap-2">
+                        <Badge variant={course.isActive ? "default" : "secondary"}>
+                          {course.isActive ? "Published" : "Draft"}
+                        </Badge>
+                        <Badge variant="outline">
+                          {course.lessonCount || 0} lessons
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {course.studentCount || 0} students
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {instructorCourses.length === 0 && (
+                <div className="col-span-full text-center py-12">
+                  <FolderOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No courses yet</h3>
+                  <p className="text-gray-500 mb-4">Create your first course to get started</p>
+                  <Button onClick={() => setActiveTab('test')}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create New Course
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
       case 'instructor':
         if (!userData?.isInstructor) return null;
         return <InstructorPanel user={userData} />;
@@ -318,11 +402,15 @@ export default function Dashboard() {
       case 'test':
         return (
           <div className="space-y-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-high-contrast">Course Content Builder</h2>
+              <Button className="bg-green-600 hover:bg-green-700 text-white">
+                <Save className="w-4 h-4 mr-2" />
+                Save Course
+              </Button>
+            </div>
             <Card>
-              <CardHeader>
-                <CardTitle>Course Content Builder</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <CourseContentBuilder 
                   courseId={3}
                   courseData={{

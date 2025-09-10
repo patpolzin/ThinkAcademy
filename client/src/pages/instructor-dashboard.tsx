@@ -1,18 +1,24 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, BookOpen, Users, BarChart3, Settings } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, BookOpen, Users, BarChart3, Settings, MessageSquare, Edit, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-// import { CourseContentManager } from '@/components/CourseContentManager';
-import { CreateCourseModal } from '@/components/CreateCourseModal';
+import { CourseEditor } from '@/components/CourseEditor';
+import { CoursePublisher } from '@/components/CoursePublisher';
+import { QuizBuilder } from '@/components/QuizBuilder';
+import { CourseForum } from '@/components/CourseForum';
 import { useWallet } from '@/hooks/useWallet';
 import type { Course } from '@shared/schema';
 
 export function InstructorDashboard() {
   const { address, isConnected } = useWallet();
+  const queryClient = useQueryClient();
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCourseEditor, setShowCourseEditor] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<number | undefined>(undefined);
+  const [selectedTab, setSelectedTab] = useState('overview');
 
   // Get user data from Supabase with proper permissions
   const { data: userData } = useQuery({
@@ -41,6 +47,27 @@ export function InstructorDashboard() {
     queryKey: ['/api/analytics'],
   });
 
+  // Course Editor View
+  if (showCourseEditor) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
+        <div className="container mx-auto px-4 py-8">
+          <CourseEditor
+            courseId={editingCourseId}
+            onClose={() => {
+              setShowCourseEditor(false);
+              setEditingCourseId(undefined);
+              // Refresh courses data
+              queryClient.invalidateQueries({ queryKey: ['/api/courses'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/analytics'] });
+            }}
+            currentUserId={address}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (selectedCourse) {
     return (
       <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
@@ -53,16 +80,144 @@ export function InstructorDashboard() {
             >
               ← Back to Dashboard
             </Button>
-            <h1 className="text-2xl font-bold">Course Content Management</h1>
+            <h1 className="text-2xl font-bold">Course Management: {selectedCourse.title}</h1>
           </div>
           
-          <div className="text-center py-8">
-            <BookOpen className="w-16 h-16 mx-auto mb-4 text-cyan-600" />
-            <h2 className="text-2xl font-bold mb-4">Course Content Manager</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Comprehensive course content management system for {selectedCourse.title}
-            </p>
-          </div>
+          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="quizzes" className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Quizzes
+              </TabsTrigger>
+              <TabsTrigger value="forum" className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Forum
+              </TabsTrigger>
+              <TabsTrigger value="publish" className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Publish
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Course Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {selectedCourse.isActive ? 'Published' : 'Draft'}
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      {selectedCourse.isActive ? 'Visible to students' : 'Hidden from students'}
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Students Enrolled</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{selectedCourse.studentCount || 0}</div>
+                    <p className="text-sm text-gray-500">Active enrollments</p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Content Items</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {(selectedCourse.lessonCount || 0) + (selectedCourse.assignmentCount || 0)}
+                    </div>
+                    <p className="text-sm text-gray-500">Lessons & quizzes</p>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>Course Information</CardTitle>
+                    <Button
+                      onClick={() => {
+                        setEditingCourseId(selectedCourse.id);
+                        setShowCourseEditor(true);
+                      }}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Course
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium">Description</h4>
+                      <p className="text-gray-600 dark:text-gray-400">{selectedCourse.description}</p>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <h4 className="font-medium text-sm">Category</h4>
+                        <p className="text-gray-600 dark:text-gray-400">{selectedCourse.category}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">Difficulty</h4>
+                        <p className="text-gray-600 dark:text-gray-400">{selectedCourse.difficulty}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">Duration</h4>
+                        <p className="text-gray-600 dark:text-gray-400">{selectedCourse.duration} hours</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">Created</h4>
+                        <p className="text-gray-600 dark:text-gray-400">
+                          {selectedCourse.createdAt ? new Date(selectedCourse.createdAt).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="quizzes" className="space-y-6">
+              <QuizBuilder 
+                courseId={selectedCourse.id} 
+                onQuizCreated={() => {
+                  // Refresh course data
+                  console.log('Quiz created for course:', selectedCourse.id);
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="forum" className="space-y-6">
+              <CourseForum 
+                courseId={selectedCourse.id} 
+                currentUserId={address}
+              />
+            </TabsContent>
+
+            <TabsContent value="publish" className="space-y-6">
+              <CoursePublisher 
+                course={selectedCourse}
+                onPublishStatusChange={(isPublished) => {
+                  // Update the course state
+                  setSelectedCourse({
+                    ...selectedCourse,
+                    isActive: isPublished
+                  });
+                }}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     );
@@ -82,7 +237,10 @@ export function InstructorDashboard() {
             </p>
           </div>
           <Button 
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              setEditingCourseId(undefined);
+              setShowCourseEditor(true);
+            }}
             className="bg-cyan-600 hover:bg-cyan-700 text-white"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -190,10 +348,14 @@ export function InstructorDashboard() {
                             </div>
                             <div className="flex flex-col gap-2">
                               <Button
-                                onClick={() => setSelectedCourse(course)}
+                                onClick={() => {
+                                  setEditingCourseId(course.id);
+                                  setShowCourseEditor(true);
+                                }}
                                 className="bg-cyan-600 hover:bg-cyan-700"
                               >
-                                Manage Content
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Course
                               </Button>
                               <Button variant="outline" size="sm">
                                 View Analytics
@@ -212,7 +374,10 @@ export function InstructorDashboard() {
                       Create your first course to start teaching students
                     </p>
                     <Button 
-                      onClick={() => setShowCreateModal(true)}
+                      onClick={() => {
+                        setEditingCourseId(undefined);
+                        setShowCourseEditor(true);
+                      }}
                       className="bg-cyan-600 hover:bg-cyan-700"
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -240,9 +405,13 @@ export function InstructorDashboard() {
                             </div>
                             <div className="flex flex-col gap-2">
                               <Button
-                                onClick={() => setSelectedCourse(course)}
+                                onClick={() => {
+                                  setEditingCourseId(course.id);
+                                  setShowCourseEditor(true);
+                                }}
                                 variant="outline"
                               >
+                                <Edit className="w-4 h-4 mr-2" />
                                 Edit Content
                               </Button>
                               <Button variant="outline" size="sm">
@@ -264,10 +433,6 @@ export function InstructorDashboard() {
           </CardContent>
         </Card>
 
-        <CreateCourseModal 
-          isOpen={showCreateModal} 
-          onClose={() => setShowCreateModal(false)} 
-        />
       </div>
     </div>
   );

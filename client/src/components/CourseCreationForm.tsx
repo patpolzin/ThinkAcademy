@@ -10,6 +10,7 @@ import { Plus, X, BookOpen, FileText, Users, Clock, Coins } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { QuizBuilder } from "@/components/QuizBuilder";
 
 interface CourseFormData {
   title: string;
@@ -137,33 +138,53 @@ export function CourseCreationForm({ onSuccess }: { onSuccess?: () => void }) {
   const onSubmit = async (data: CourseFormData) => {
     setIsSubmitting(true);
     try {
-      // Create the course
-      const courseResponse = await apiRequest('/api/courses', 'POST', {
-        ...data,
-        lessonCount: lessons.length,
-        assignmentCount: quizzes.length,
-        isActive: true
+      // Create the course first
+      const courseResponse = await fetch('/api/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...data,
+          lessonCount: lessons.length,
+          assignmentCount: quizzes.length,
+          isActive: false // Start as draft
+        })
       });
 
-      if (courseResponse.ok) {
-        const course = await courseResponse.json();
-        
-        // Create lessons, quizzes, and resources
-        await Promise.all([
-          ...lessons.map(lesson => 
-            apiRequest('/api/lessons', 'POST', { ...lesson, courseId: course.id })
-          ),
-          ...quizzes.map(quiz => 
-            apiRequest('/api/quizzes', 'POST', { ...quiz, courseId: course.id })
-          ),
-          ...resources.map(resource => 
-            apiRequest('/api/resources', 'POST', { ...resource, courseId: course.id })
-          )
-        ]);
-
-        toast({ title: "Course created successfully!" });
-        onSuccess?.();
+      if (!courseResponse.ok) {
+        throw new Error('Failed to create course');
       }
+
+      const course = await courseResponse.json();
+      
+      // Create lessons
+      for (const lesson of lessons) {
+        await fetch(`/api/courses/${course.id}/lessons`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...lesson,
+            courseId: course.id,
+            orderIndex: lesson.order
+          })
+        });
+      }
+
+      // Quizzes are handled by QuizBuilder, so we skip them here
+      
+      // Create resources
+      for (const resource of resources) {
+        await fetch(`/api/courses/${course.id}/resources`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...resource,
+            courseId: course.id
+          })
+        });
+      }
+
+      toast({ title: "Course created successfully!" });
+      onSuccess?.();
     } catch (error) {
       console.error('Failed to create course:', error);
       toast({ title: "Failed to create course", variant: "destructive" });
@@ -382,37 +403,44 @@ export function CourseCreationForm({ onSuccess }: { onSuccess?: () => void }) {
               </TabsContent>
 
               <TabsContent value="quizzes" className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Course Quizzes</h3>
-                  <Button type="button" onClick={addQuiz} variant="outline" data-testid="button-add-quiz">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Quiz
-                  </Button>
-                </div>
-                {quizzes.map((quiz, index) => (
-                  <Card key={quiz.id}>
-                    <CardContent className="pt-4">
-                      <div className="flex justify-between items-center mb-3">
-                        <Badge variant="secondary">Quiz {index + 1}</Badge>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeQuiz(quiz.id)}
-                          data-testid={`button-remove-quiz-${quiz.id}`}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <Input
-                        value={quiz.title}
-                        onChange={(e) => updateQuiz(quiz.id, { title: e.target.value })}
-                        placeholder="Quiz title"
-                        data-testid={`input-quiz-title-${quiz.id}`}
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
+                <QuizBuilder 
+                  courseId={0} // Will be set after course creation
+                  onQuizCreated={(quiz) => {
+                    setQuizzes([...quizzes, { 
+                      id: quiz.id?.toString() || Date.now().toString(), 
+                      title: quiz.title, 
+                      questions: quiz.questions || [] 
+                    }]);
+                  }} 
+                />
+                {quizzes.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="text-md font-medium mb-3">Created Quizzes</h4>
+                    {quizzes.map((quiz, index) => (
+                      <Card key={quiz.id} className="mb-3">
+                        <CardContent className="pt-4">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <Badge variant="secondary" className="mr-2">Quiz {index + 1}</Badge>
+                              <span className="font-medium">{quiz.title}</span>
+                              <span className="text-sm text-gray-500 ml-2">
+                                ({quiz.questions?.length || 0} questions)
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeQuiz(quiz.id)}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="resources" className="space-y-4">

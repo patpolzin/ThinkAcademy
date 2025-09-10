@@ -116,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/instructor/courses/:walletAddress", async (req, res) => {
     try {
       const { walletAddress } = req.params;
-      const instructorCourses = await storage.getCoursesByInstructor(walletAddress.toLowerCase());
+      const instructorCourses = await directDb.getInstructorCourses(walletAddress.toLowerCase());
       res.json(instructorCourses);
     } catch (error) {
       console.error("Instructor courses fetch error:", error);
@@ -787,6 +787,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error publishing course:', error);
       res.status(500).json({ error: 'Failed to publish course' });
+    }
+  });
+
+  // Lesson management routes
+  app.put('/api/lessons/:lessonId', async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      const updates = req.body;
+      const lesson = await directDb.updateLesson(parseInt(lessonId), updates);
+      res.json(lesson);
+    } catch (error) {
+      console.error('Error updating lesson:', error);
+      res.status(500).json({ error: 'Failed to update lesson' });
+    }
+  });
+
+  app.delete('/api/lessons/:lessonId', async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      await directDb.deleteLesson(parseInt(lessonId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting lesson:', error);
+      res.status(500).json({ error: 'Failed to delete lesson' });
+    }
+  });
+
+  // Resource management routes
+  app.put('/api/resources/:resourceId', async (req, res) => {
+    try {
+      const { resourceId } = req.params;
+      const updates = req.body;
+      const resource = await directDb.updateResource(parseInt(resourceId), updates);
+      res.json(resource);
+    } catch (error) {
+      console.error('Error updating resource:', error);
+      res.status(500).json({ error: 'Failed to update resource' });
+    }
+  });
+
+  app.delete('/api/resources/:resourceId', async (req, res) => {
+    try {
+      const { resourceId } = req.params;
+      await directDb.deleteResource(parseInt(resourceId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting resource:', error);
+      res.status(500).json({ error: 'Failed to delete resource' });
+    }
+  });
+
+  // Lesson progress routes
+  app.get('/api/users/:userId/progress/course/:courseId', async (req, res) => {
+    try {
+      const { userId, courseId } = req.params;
+      const progress = await directDb.getLessonProgress(userId, parseInt(courseId));
+      res.json(progress);
+    } catch (error) {
+      console.error('Error fetching lesson progress:', error);
+      res.status(500).json({ error: 'Failed to fetch lesson progress' });
+    }
+  });
+
+  app.put('/api/lessons/:lessonId/progress', async (req, res) => {
+    try {
+      const { lessonId } = req.params;
+      const progressData = req.body;
+      const progress = await directDb.updateLessonProgress(parseInt(lessonId), progressData);
+      res.json(progress);
+    } catch (error) {
+      console.error('Error updating lesson progress:', error);
+      res.status(500).json({ error: 'Failed to update lesson progress' });
     }
   });
 

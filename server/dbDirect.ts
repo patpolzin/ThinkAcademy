@@ -64,6 +64,48 @@ export class DirectStorage {
     }
   }
 
+  async getInstructorCourses(walletAddress: string) {
+    const sql = createDbConnection();
+    try {
+      // First get the user ID from wallet address
+      const userResult = await sql`SELECT id FROM users WHERE wallet_address = ${walletAddress.toLowerCase()}`;
+      if (userResult.length === 0) {
+        await sql.end();
+        return [];
+      }
+      
+      const userId = userResult[0].id;
+      const result = await sql`
+        SELECT c.*, 
+               COUNT(DISTINCT e.id) as student_count
+        FROM courses c
+        LEFT JOIN enrollments e ON c.id = e.course_id
+        WHERE c.instructor_id = ${userId}
+        GROUP BY c.id
+        ORDER BY c.created_at DESC
+      `;
+      await sql.end();
+      
+      // Transform the results to match expected interface
+      return result.map(course => ({
+        ...course,
+        tokenRequirement: typeof course.token_requirement === 'string' 
+          ? JSON.parse(course.token_requirement) 
+          : course.token_requirement,
+        instructorName: course.instructor_name,
+        isActive: course.is_active,
+        lessonCount: course.lesson_count || 0,
+        assignmentCount: course.assignment_count || 0,
+        studentCount: course.student_count || 0,
+        createdAt: course.created_at,
+        updatedAt: course.updated_at
+      }));
+    } catch (error) {
+      console.error('Database error fetching instructor courses:', error);
+      throw error;
+    }
+  }
+
   async createCourse(courseData: any) {
     const sql = createDbConnection();
     try {
@@ -274,6 +316,28 @@ export class DirectStorage {
     }
   }
 
+  async updateResource(resourceId: number, updates: any) {
+    const sql = createDbConnection();
+    try {
+      const result = await sql`
+        UPDATE resources 
+        SET title = COALESCE(${updates.title || null}, title),
+            description = COALESCE(${updates.description || null}, description),
+            file_url = COALESCE(${updates.fileUrl || null}, file_url),
+            file_type = COALESCE(${updates.fileType || null}, file_type),
+            is_public = COALESCE(${updates.isPublic}, is_public),
+            updated_at = NOW()
+        WHERE id = ${resourceId}
+        RETURNING *
+      `;
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error updating resource:', error);
+      throw error;
+    }
+  }
+
   async deleteResource(resourceId: number) {
     const sql = createDbConnection();
     try {
@@ -412,8 +476,12 @@ export class DirectStorage {
             description = COALESCE(${updates.description}, description),
             category = COALESCE(${updates.category}, category),
             difficulty = COALESCE(${updates.difficulty}, difficulty),
-            token_requirements = COALESCE(${JSON.stringify(updates.tokenRequirements)}, token_requirements),
+            duration = COALESCE(${updates.duration}, duration),
+            instructor_name = COALESCE(${updates.instructorName}, instructor_name),
+            token_requirement = COALESCE(${updates.tokenRequirement ? JSON.stringify(updates.tokenRequirement) : null}, token_requirement),
             is_active = COALESCE(${updates.isActive}, is_active),
+            lesson_count = COALESCE(${updates.lessonCount}, lesson_count),
+            assignment_count = COALESCE(${updates.assignmentCount}, assignment_count),
             updated_at = NOW()
         WHERE id = ${courseId}
         RETURNING *
@@ -646,6 +714,86 @@ export class DirectStorage {
       return result;
     } catch (error) {
       console.error('Database error fetching forum replies:', error);
+      throw error;
+    }
+  }
+
+  // Lesson progress methods
+  async getLessonProgress(userId: string, courseId: number) {
+    const sql = createDbConnection();
+    try {
+      // Convert wallet address to user ID if needed
+      let actualUserId = userId;
+      if (typeof userId === 'string' && userId.startsWith('0x')) {
+        const userResult = await sql`SELECT id FROM users WHERE wallet_address = ${userId.toLowerCase()}`;
+        if (userResult.length === 0) {
+          await sql.end();
+          return [];
+        }
+        actualUserId = userResult[0].id;
+      }
+
+      const result = await sql`
+        SELECT lp.*, l.title as lesson_title
+        FROM lesson_progress lp
+        JOIN lessons l ON lp.lesson_id::text = l.id::text
+        WHERE lp.user_id::text = ${actualUserId} AND l.course_id = ${courseId}
+        ORDER BY l.order_index ASC
+      `;
+      await sql.end();
+      return result;
+    } catch (error) {
+      console.error('Database error fetching lesson progress:', error);
+      return [];
+    }
+  }
+
+  async updateLessonProgress(lessonId: number, progressData: any) {
+    const sql = createDbConnection();
+    try {
+      // Convert wallet address to user ID if needed
+      let actualUserId = progressData.userId;
+      if (typeof progressData.userId === 'string' && progressData.userId.startsWith('0x')) {
+        const userResult = await sql`SELECT id FROM users WHERE wallet_address = ${progressData.userId.toLowerCase()}`;
+        if (userResult.length === 0) {
+          throw new Error('User not found');
+        }
+        actualUserId = userResult[0].id;
+      }
+
+      // Check if progress record exists
+      const existingProgress = await sql`
+        SELECT * FROM lesson_progress 
+        WHERE lesson_id = ${lessonId} AND user_id::text = ${actualUserId}
+      `;
+
+      let result;
+      if (existingProgress.length > 0) {
+        // Update existing progress
+        result = await sql`
+          UPDATE lesson_progress 
+          SET is_completed = COALESCE(${progressData.isCompleted}, is_completed),
+              watch_time = COALESCE(${progressData.watchTime}, watch_time),
+              completed_at = COALESCE(${progressData.completedAt ? new Date(progressData.completedAt) : null}, completed_at),
+              last_accessed_at = COALESCE(${progressData.lastAccessedAt ? new Date(progressData.lastAccessedAt) : null}, last_accessed_at)
+          WHERE lesson_id = ${lessonId} AND user_id::text = ${actualUserId}
+          RETURNING *
+        `;
+      } else {
+        // Create new progress record
+        result = await sql`
+          INSERT INTO lesson_progress (lesson_id, user_id, is_completed, watch_time, completed_at, last_accessed_at)
+          VALUES (${lessonId}, ${actualUserId}, ${progressData.isCompleted || false}, ${progressData.watchTime || 0}, 
+                  ${progressData.completedAt ? new Date(progressData.completedAt) : null}, 
+                  ${progressData.lastAccessedAt ? new Date(progressData.lastAccessedAt) : new Date()})
+          RETURNING *
+        `;
+      }
+
+      await sql.end();
+      return result[0];
+    } catch (error) {
+      console.error('Database error updating lesson progress:', error);
       throw error;
     }
   }

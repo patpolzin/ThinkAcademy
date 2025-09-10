@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Video, LayoutDashboard, Settings, Users, TestTube } from 'lucide-react';
+import { BookOpen, Video, LayoutDashboard, Settings, Users, TestTube, FolderOpen, Plus } from 'lucide-react';
 import { useWallet } from './WalletProvider';
 import { useQuery } from "@tanstack/react-query";
 
@@ -21,9 +21,10 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'live', label: 'Live Sessions', icon: Video },
-    { id: 'test', label: 'Course Test', icon: TestTube },
-    ...(userData?.isInstructor ? [{ id: 'instructor', label: 'Instructor', icon: Users }] : []),
+    ...(userData?.isInstructor ? [{ id: 'mycourses', label: 'My Courses', icon: FolderOpen }] : []),
     ...(userData?.isAdmin ? [{ id: 'admin', label: 'Admin', icon: Settings }] : []),
+    ...(userData?.isInstructor ? [{ id: 'instructor', label: 'Instructor', icon: Users }] : []),
+    { id: 'test', label: 'New Course', icon: Plus },
   ];
 
   if (!isConnected) {

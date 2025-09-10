@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useWallet } from '@/components/WalletProvider';
 import { apiRequest } from '@/lib/queryClient';
 import EnrollmentModal from '@/components/EnrollmentModal';
+import { CourseForum } from '@/components/CourseForum';
+import { LessonProgress } from '@/components/LessonProgress';
 import { Link } from 'wouter';
 
 export default function CourseDetailPage() {
@@ -251,52 +253,14 @@ export default function CourseDetailPage() {
             </TabsList>
 
             <TabsContent value="lessons" className="space-y-4">
-              <Card className="border border-slate-200 dark:border-gray-700">
-                <CardHeader className="bg-slate-50 dark:bg-gray-800/50 border-b border-slate-200 dark:border-gray-700">
-                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                    <Play className="w-5 h-5 text-cyan-600" />
-                    Course Lessons
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {lessons.length > 0 ? (
-                    <div className="space-y-4">
-                      {lessons.map((lesson: any, index: number) => (
-                        <div
-                          key={lesson.id}
-                          className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-gray-700 rounded-lg hover:bg-slate-100 dark:hover:bg-gray-600 transition-colors cursor-pointer border border-slate-200 dark:border-gray-600"
-                        >
-                          <div className="w-10 h-10 bg-cyan-600 text-white rounded-full flex items-center justify-center font-bold">
-                            {index + 1}
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-slate-900 dark:text-white">
-                              {lesson.title}
-                            </h4>
-                            {lesson.description && (
-                              <p className="text-slate-600 dark:text-gray-300 mt-1">
-                                {lesson.description}
-                              </p>
-                            )}
-                            {lesson.duration && (
-                              <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">
-                                Duration: {lesson.duration} minutes
-                              </p>
-                            )}
-                          </div>
-                          <Play className="w-5 h-5 text-cyan-600" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <Play className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                      <p className="text-slate-700 dark:text-gray-300 font-medium text-lg">No lessons available yet</p>
-                      <p className="text-slate-500 dark:text-gray-400 mt-2">The instructor is preparing course content. Check back soon!</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <LessonProgress 
+                courseId={parseInt(courseId || '0')} 
+                userId={address || ''}
+                onProgressUpdate={(progress) => {
+                  // Update enrollment progress if needed
+                  console.log('Course progress updated:', progress);
+                }}
+              />
             </TabsContent>
 
             <TabsContent value="quizzes" className="space-y-4">
@@ -391,44 +355,10 @@ export default function CourseDetailPage() {
             </TabsContent>
 
             <TabsContent value="forum" className="space-y-4">
-              <Card className="border border-slate-200 dark:border-gray-700">
-                <CardHeader className="bg-slate-50 dark:bg-gray-800/50 border-b border-slate-200 dark:border-gray-700">
-                  <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
-                    <MessageCircle className="w-5 h-5 text-green-600" />
-                    Course Discussion Forum
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {forumPosts && forumPosts.length > 0 ? (
-                    <div className="space-y-4">
-                      {forumPosts.map((post: any) => (
-                        <div key={post.id} className="p-4 bg-slate-50 dark:bg-gray-700 rounded-lg border border-slate-200 dark:border-gray-600">
-                          <h4 className="font-semibold text-slate-900 dark:text-white mb-2">
-                            {post.title}
-                          </h4>
-                          <p className="text-slate-600 dark:text-gray-300 mb-3">
-                            {post.content.substring(0, 200)}...
-                          </p>
-                          <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-gray-400">
-                            <span className="font-medium">By {post.userDisplayName || 'User'}</span>
-                            <span>•</span>
-                            <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                            <span>•</span>
-                            <span className="text-green-600 font-medium">{post.replies || 0} replies</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <MessageCircle className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                      <p className="text-slate-700 dark:text-gray-300 font-medium text-lg">No discussions yet</p>
-                      <p className="text-slate-500 dark:text-gray-400 mt-2 mb-6">Start engaging with your fellow students and instructor!</p>
-                      <Button className="bg-green-600 hover:bg-green-700">Start a Discussion</Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <CourseForum 
+                courseId={parseInt(courseId || '0')} 
+                currentUserId={address} 
+              />
             </TabsContent>
           </Tabs>
         ) : (
